@@ -1,0 +1,53 @@
+package es.academia.campushub.entity;
+
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name= "grupos")
+public class GruposEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "nombre", nullable = false, length = 100)
+    private String nombre;
+
+    @Column(name = "nivel", nullable = false, length = 100)
+    private String nivel;
+
+    @Column(name = "Docente Tutor", nullable = false, length = 100)
+    private String docenteTutor;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public String getNivel() {
+        return nivel;
+    }
+
+    public void setNivel(String nivel) {
+        this.nivel = nivel;
+    }
+
+    public String getDocenteTutor() {
+        return docenteTutor;
+    }
+
+    public void setDocenteTutor(String docenteTutor) {
+        this.docenteTutor = docenteTutor;
+    }
+}

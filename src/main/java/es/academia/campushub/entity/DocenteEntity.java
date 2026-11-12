@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name= "docentes")
@@ -24,6 +25,10 @@ public class DocenteEntity {
     @Email(message = "El formato del correo no es válido")
     @Column(name = "docente_correo_electronico", nullable = false, unique = true, length = 250)
     private String docenteCorreoElectronico;
+
+    @ManyToOne
+    @JoinColumn(name = "departamento_id")
+    private DepartamentosEntity departamento;
 
     @OneToMany(mappedBy = "docenteResponsable", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Actividad> actividades = new ArrayList<>();

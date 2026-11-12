@@ -1,6 +1,6 @@
 package es.academia.campushub.entity;
 
-import jakarta.persistence.Id;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
@@ -12,6 +12,6 @@ public record ActividadEntity(
         String descripcion,
         List<String> tipos,
         int nmaxParticipantes,
-        String docenteResponsable
+        Long docenteId
 
 ){}

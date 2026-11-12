@@ -30,19 +30,6 @@ public class DocenteEntity {
     @JoinColumn(name = "departamento_id")
     private DepartamentosEntity departamento;
 
-    @OneToMany(mappedBy = "docenteResponsable", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Actividad> actividades = new ArrayList<>();
-
-    public void agregarActividad(Actividad actividad) {
-        actividades.add(actividad);
-        actividad.setDocenteResponsable(this);
-    }
-
-    public void removerActividad(Actividad actividad) {
-        actividades.remove(actividad);
-        actividad.setDocenteResponsable(null);
-    }
-
     public Long getDocenteId() {
         return docenteId;
     }
@@ -73,13 +60,5 @@ public class DocenteEntity {
 
     public void setDocenteCorreoElectronico(String docenteCorreoElectronico) {
         this.docenteCorreoElectronico = docenteCorreoElectronico;
-    }
-
-    public List<Actividad> getActividades() {
-        return actividades;
-    }
-
-    public void setActividades(List<Actividad> actividades) {
-        this.actividades = actividades;
     }
 }

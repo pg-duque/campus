@@ -24,6 +24,10 @@ public class EstudiantesEntity {
     @Column(name = "fecha_nacimiento", length = 50)
     private LocalDate fechaNacimiento;
 
+    @ManyToOne
+    @JoinColumn(name = "grupo_id")
+    private GruposEntity grupo;
+
     public EstudiantesEntity() {
     }
 
@@ -37,7 +41,7 @@ public class EstudiantesEntity {
 
     public Long getId() {
         return id;
-    }
+    }s
 
     public void setId(Long id) {
         this.id = id;

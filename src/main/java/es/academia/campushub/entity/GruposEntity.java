@@ -3,6 +3,9 @@ package es.academia.campushub.entity;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name= "grupos")
 public class GruposEntity {
@@ -18,6 +21,9 @@ public class GruposEntity {
 
     @Column(name = "Docente Tutor", nullable = false, length = 100)
     private String docenteTutor;
+
+    @OneToMany(mappedBy = "grupo")
+    private List<EstudiantesEntity> estudiantes = new ArrayList<>();
 
     public Long getId() {
         return id;

@@ -24,6 +24,8 @@ public interface CampusHubService {
 
   SeguimientoResponse registrarSeguimiento(Long actividadId, CreateSeguimientoRequest request);
 
+  List<SeguimientoResponse> seguimientos(Long actividadId);
+
   ActividadDetalleResponse detalle(Long id);
 
   List<ActividadHistorialResponse> historial(Long estudianteId);
@@ -37,4 +39,6 @@ public interface CampusHubService {
   void asociarEtiqueta(Long actividadId, Long etiquetaId);
 
   List<ActividadResponse> actividadesPorEtiqueta(Long etiquetaId);
+
+    ActividadDetalleResponse obtenerDetalleActividad(String id);
 }

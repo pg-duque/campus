@@ -1,7 +1,11 @@
 package es.academia.campushub.service;
 
 import es.academia.campushub.controller.dto.*;
+import es.academia.campushub.entity.SeguimientoEntity;
+import es.academia.campushub.repository.SeguimientoRepository;
+import es.academia.campushub.util.exception.InvalidInputException;
 import es.academia.campushub.util.exception.PersistenciaPendienteException;
+import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +15,12 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class CampusHubServiceImpl implements CampusHubService {
+  private final SeguimientoRepository seguimientoRepository;
+
+  public CampusHubServiceImpl(SeguimientoRepository seguimientoRepository) {
+    this.seguimientoRepository = seguimientoRepository;
+  }
+
   @Override
   public GrupoResponse crearGrupo(CreateGrupoRequest request) {
     throw new PersistenciaPendienteException("crearGrupo");
@@ -59,7 +69,24 @@ public class CampusHubServiceImpl implements CampusHubService {
   @Override
   public SeguimientoResponse registrarSeguimiento(
       Long actividadId, CreateSeguimientoRequest request) {
-    throw new PersistenciaPendienteException("registrarSeguimiento");
+    if (request.tipo() == null || request.tipo().isBlank()) {
+      throw new InvalidInputException("El tipo de seguimiento es obligatorio");
+    }
+    if (request.datos() == null) {
+      throw new InvalidInputException("Los datos del seguimiento son obligatorios");
+    }
+
+    SeguimientoEntity guardado =
+        seguimientoRepository.save(
+            new SeguimientoEntity(actividadId, request.tipo(), request.datos(), Instant.now()));
+    return seguimientoResponse(guardado);
+  }
+
+  @Override
+  public List<SeguimientoResponse> seguimientos(Long actividadId) {
+    return seguimientoRepository.findByActividadIdOrderByCreadoEnAsc(actividadId).stream()
+        .map(CampusHubServiceImpl::seguimientoResponse)
+        .toList();
   }
 
   @Override
@@ -95,5 +122,19 @@ public class CampusHubServiceImpl implements CampusHubService {
   @Override
   public List<ActividadResponse> actividadesPorEtiqueta(Long etiquetaId) {
     throw new PersistenciaPendienteException("actividadesPorEtiqueta");
+  }
+
+  @Override
+  public ActividadDetalleResponse obtenerDetalleActividad(String id) {
+    throw new PersistenciaPendienteException("obtenerDetalleActividad");
+  }
+
+  private static SeguimientoResponse seguimientoResponse(SeguimientoEntity seguimiento) {
+    return new SeguimientoResponse(
+        seguimiento.getId(),
+        seguimiento.getActividadId(),
+        seguimiento.getTipo(),
+        seguimiento.getDatos(),
+        seguimiento.getCreadoEn().toString());
   }
 }

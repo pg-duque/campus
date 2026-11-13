@@ -2,7 +2,6 @@ package es.academia.campushub.controller.rest;
 
 import es.academia.campushub.controller.dto.*;
 import es.academia.campushub.service.CampusHubService;
-import es.academia.campushub.service.SeguimientoService;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,11 +10,9 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 public class ActividadController {
   private final CampusHubService service;
-  private final SeguimientoService seguimientoService;
 
-  public ActividadController(CampusHubService service, SeguimientoService seguimientoService) {
+  public ActividadController(CampusHubService service) {
     this.service = service;
-    this.seguimientoService = seguimientoService;
   }
 
   @PostMapping("/api/actividades")
@@ -42,16 +39,18 @@ public class ActividadController {
   @PostMapping("/api/actividades/{id}/seguimientos")
   public ResponseEntity<SeguimientoResponse> seguimiento(
       @PathVariable Long id, @RequestBody CreateSeguimientoRequest r) {
-    return ResponseEntity.status(HttpStatus.CREATED).body(seguimientoService.registrar(id, r));
+    return ResponseEntity.status(HttpStatus.CREATED).body(service.registrarSeguimiento(id, r));
   }
 
   @GetMapping("/api/actividades/{id}/seguimientos")
   public List<SeguimientoResponse> seguimientos(@PathVariable Long id) {
-    return seguimientoService.deActividad(id);
+    return service.seguimientos(id);
   }
 
   @GetMapping("/api/actividades/{id}/detalle")
   public ActividadDetalleResponse detalle(@PathVariable Long id) {
     return service.detalle(id);
   }
+
+
 }

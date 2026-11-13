@@ -55,14 +55,6 @@ public class EstudiantesEntity {
         this.nombre = nombre;
     }
 
-    public String getApellido() {
-        return apellidos;
-    }
-
-    public void setApellido(String apellido) {
-        this.apellidos = apellidos;
-    }
-
     public String getEmail() {
         return email;
     }
@@ -77,6 +69,18 @@ public class EstudiantesEntity {
 
     public String getApellidos() {
         return apellidos;
+    }
+
+    public void setApellidos(String apellidos) {
+        this.apellidos = apellidos;
+    }
+
+    public GruposEntity getGrupo() {
+        return grupo;
+    }
+
+    public void setGrupo(GruposEntity grupo) {
+        this.grupo = grupo;
     }
 
     public Long getGrupoId() {

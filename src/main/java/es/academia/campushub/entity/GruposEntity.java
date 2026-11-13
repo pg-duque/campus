@@ -19,8 +19,9 @@ public class GruposEntity {
     @Column(name = "nivel", nullable = false, length = 100)
     private String nivel;
 
-    @Column(name = "Docente Tutor", nullable = false, length = 100)
-    private String docenteTutor;
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "tutor_docente_id", nullable = false)
+    private DocenteEntity docenteTutor;
 
     @OneToMany(mappedBy = "grupo")
     private List<EstudiantesEntity> estudiantes = new ArrayList<>();
@@ -49,11 +50,11 @@ public class GruposEntity {
         this.nivel = nivel;
     }
 
-    public String getDocenteTutor() {
+    public DocenteEntity getDocenteTutor() {
         return docenteTutor;
     }
 
-    public void setDocenteTutor(String docenteTutor) {
+    public void setDocenteTutor(DocenteEntity docenteTutor) {
         this.docenteTutor = docenteTutor;
     }
 }

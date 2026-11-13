@@ -12,5 +12,5 @@ public interface GruposRepository extends JpaRepository<GruposEntity, Long> {
 
     Optional<GruposEntity> findByNombre(String nombre);
     List<GruposEntity> findByNivel(String nivel);
-    List<GruposEntity> findByDocenteTutor(String docenteTutor);
+    List<GruposEntity> findByDocenteTutor_DocenteId(Long docenteId);
 }

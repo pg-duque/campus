@@ -10,9 +10,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
     def = "{'actividadId': 1, 'etiquetaId': 1}",
     unique = true)
 public record ActividadEtiquetaEntity(
-    @Id String id, String actividadId, Long etiquetaId) {
+    @Id String id, Long actividadId, Long etiquetaId) {
 
-  public ActividadEtiquetaEntity(String actividadId, Long etiquetaId) {
+  public ActividadEtiquetaEntity(Long actividadId, Long etiquetaId) {
     this(null, actividadId, etiquetaId);
   }
 }

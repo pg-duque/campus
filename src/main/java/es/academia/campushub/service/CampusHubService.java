@@ -40,5 +40,5 @@ public interface CampusHubService {
 
   List<ActividadResponse> actividadesPorEtiqueta(Long etiquetaId);
 
-    ActividadDetalleResponse obtenerDetalleActividad(String id);
+  ActividadDetalleResponse obtenerDetalleActividad(Long id);
 }

@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 @Document(collection = "actividades")
 public record ActividadEntity(
-        @Id String actividadId,
+        @Id Long actividadId,
 
         @NotBlank(message = "El título es obligatorio")
         String titulo,

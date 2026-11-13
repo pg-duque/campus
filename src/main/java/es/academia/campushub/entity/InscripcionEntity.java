@@ -12,10 +12,10 @@ import org.springframework.data.mongodb.core.mapping.Field;
     def = "{'actividadId': 1, 'estudianteId': 1}",
     unique = true)
 public class InscripcionEntity {
-  @Id private String id;
+  @Id private Long id;
 
   @Field("actividadId")
-  private String actividadId;
+  private Long actividadId;
 
   @Field("estudianteId")
   private Long estudianteId;
@@ -25,17 +25,21 @@ public class InscripcionEntity {
 
   protected InscripcionEntity() {}
 
-  public InscripcionEntity(String actividadId, Long estudianteId) {
+  public InscripcionEntity(Long actividadId, Long estudianteId) {
     this.actividadId = actividadId;
     this.estudianteId = estudianteId;
     this.fechaInscripcion = LocalDateTime.now();
   }
 
-  public String getId() {
+  public Long getId() {
     return id;
   }
 
-  public String getActividadId() {
+  public void setId(Long id) {
+    this.id = id;
+  }
+
+  public Long getActividadId() {
     return actividadId;
   }
 

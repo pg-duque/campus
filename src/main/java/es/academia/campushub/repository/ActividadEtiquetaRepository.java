@@ -6,7 +6,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface ActividadEtiquetaRepository
     extends MongoRepository<ActividadEtiquetaEntity, String> {
-  List<ActividadEtiquetaEntity> findByActividadId(String actividadId);
+  List<ActividadEtiquetaEntity> findByActividadId(Long actividadId);
 
-  boolean existsByActividadIdAndEtiquetaId(String actividadId, Long etiquetaId);
+  boolean existsByActividadIdAndEtiquetaId(Long actividadId, Long etiquetaId);
 }

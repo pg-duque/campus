@@ -51,18 +51,18 @@ class CampusHubServiceImplTest {
             23L, "Alicia", "Ruiz", "alicia@example.test", LocalDate.of(2005, 2, 3));
     ActividadEntity actividad =
         new ActividadEntity(
-            "7", "Taller", "Práctica", TipoActividad.TALLERER_PRECTICOS, "2027-05-01", 4, 12L);
+            7L, "Taller", "Práctica", TipoActividad.TALLERER_PRECTICOS, "2027-05-01", 4, 12L);
     SeguimientoEntity seguimiento =
         new SeguimientoEntity(7L, "TALLER", java.util.Map.of("lenguaje", "Java"), Instant.EPOCH);
     EtiquetaEntity etiqueta = new EtiquetaEntity(31L, "programación");
 
-    when(actividadRepository.findById("7")).thenReturn(Optional.of(actividad));
+    when(actividadRepository.findById(7L)).thenReturn(Optional.of(actividad));
     when(docenteRepository.findById(12L)).thenReturn(Optional.of(docente));
-    when(inscripcionRepository.findByActividadIdOrderByFechaInscripcionAsc("7"))
-        .thenReturn(List.of(new InscripcionEntity("7", 23L)));
+    when(inscripcionRepository.findByActividadIdOrderByFechaInscripcionAsc(7L))
+        .thenReturn(List.of(new InscripcionEntity(7L, 23L)));
     when(estudiantesRepository.findAllById(List.of(23L))).thenReturn(List.of(estudiante));
-    when(actividadEtiquetaRepository.findByActividadId("7"))
-        .thenReturn(List.of(new ActividadEtiquetaEntity("7", 31L)));
+    when(actividadEtiquetaRepository.findByActividadId(7L))
+        .thenReturn(List.of(new ActividadEtiquetaEntity(7L, 31L)));
     when(etiquetaRepository.findAllById(List.of(31L))).thenReturn(List.of(etiqueta));
     when(seguimientoRepository.findByActividadIdOrderByCreadoEnAsc(7L))
         .thenReturn(List.of(seguimiento));
@@ -81,16 +81,16 @@ class CampusHubServiceImplTest {
 
   @Test
   void detalleDevuelveColeccionesVaciasCuandoNoHayDatosRelacionados() {
-    when(actividadRepository.findById("8"))
+    when(actividadRepository.findById(8L))
         .thenReturn(
             Optional.of(
                 new ActividadEntity(
-                    "8", "Charla", null, TipoActividad.CHARLAS, "2027-06-01", 10, 12L)));
+                    8L, "Charla", null, TipoActividad.CHARLAS, "2027-06-01", 10, 12L)));
     when(docenteRepository.findById(12L)).thenReturn(Optional.of(docente()));
-    when(inscripcionRepository.findByActividadIdOrderByFechaInscripcionAsc("8"))
+    when(inscripcionRepository.findByActividadIdOrderByFechaInscripcionAsc(8L))
         .thenReturn(List.of());
     when(estudiantesRepository.findAllById(List.of())).thenReturn(List.of());
-    when(actividadEtiquetaRepository.findByActividadId("8")).thenReturn(List.of());
+    when(actividadEtiquetaRepository.findByActividadId(8L)).thenReturn(List.of());
     when(etiquetaRepository.findAllById(List.of())).thenReturn(List.of());
     when(seguimientoRepository.findByActividadIdOrderByCreadoEnAsc(8L)).thenReturn(List.of());
 

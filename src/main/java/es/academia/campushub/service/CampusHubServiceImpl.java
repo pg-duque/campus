@@ -123,7 +123,7 @@ public class CampusHubServiceImpl implements CampusHubService {
 
   @Override
   public ActividadDetalleResponse detalle(Long id) {
-    String actividadId = id.toString();
+    Long actividadId = id;
     ActividadEntity actividad =
         actividadRepository
             .findById(actividadId)
@@ -142,7 +142,7 @@ public class CampusHubServiceImpl implements CampusHubService {
     List<EtiquetaResponse> etiquetas = obtenerEtiquetas(actividadId);
     List<SeguimientoResponse> seguimientos = seguimientos(id);
     return new ActividadDetalleResponse(
-        actividadResponse(actividad, id),
+        actividadResponse(actividad),
         docenteResponse(docente),
         ocupadas,
         Math.max(0, actividad.maxParticipantes() - ocupadas),
@@ -177,15 +177,14 @@ public class CampusHubServiceImpl implements CampusHubService {
 
   @Override
   public void asociarEtiqueta(Long actividadId, Long etiquetaId) {
-    String id = actividadId.toString();
-    if (!actividadRepository.existsById(id)) {
+    if (!actividadRepository.existsById(actividadId)) {
       throw new ResourceNotFoundException("No existe la actividad indicada");
     }
     if (!etiquetaRepository.existsById(etiquetaId)) {
       throw new ResourceNotFoundException("No existe la etiqueta indicada");
     }
-    if (!actividadEtiquetaRepository.existsByActividadIdAndEtiquetaId(id, etiquetaId)) {
-      actividadEtiquetaRepository.save(new ActividadEtiquetaEntity(id, etiquetaId));
+    if (!actividadEtiquetaRepository.existsByActividadIdAndEtiquetaId(actividadId, etiquetaId)) {
+      actividadEtiquetaRepository.save(new ActividadEtiquetaEntity(actividadId, etiquetaId));
     }
   }
 
@@ -195,12 +194,8 @@ public class CampusHubServiceImpl implements CampusHubService {
   }
 
   @Override
-  public ActividadDetalleResponse obtenerDetalleActividad(String id) {
-    try {
-      return detalle(Long.valueOf(id));
-    } catch (NumberFormatException ex) {
-      throw new InvalidInputException("El identificador de actividad debe ser numérico");
-    }
+  public ActividadDetalleResponse obtenerDetalleActividad(Long id) {
+    return detalle(id);
   }
 
   private static SeguimientoResponse seguimientoResponse(SeguimientoEntity seguimiento) {
@@ -230,7 +225,7 @@ public class CampusHubServiceImpl implements CampusHubService {
     return List.copyOf(respuestas);
   }
 
-  private List<EtiquetaResponse> obtenerEtiquetas(String actividadId) {
+  private List<EtiquetaResponse> obtenerEtiquetas(Long actividadId) {
     List<ActividadEtiquetaEntity> relaciones =
         actividadEtiquetaRepository.findByActividadId(actividadId);
     List<Long> ids = relaciones.stream().map(ActividadEtiquetaEntity::etiquetaId).distinct().toList();
@@ -268,9 +263,9 @@ public class CampusHubServiceImpl implements CampusHubService {
         docente.getDepartamento() == null ? null : docente.getDepartamento().getId());
   }
 
-  private static ActividadResponse actividadResponse(ActividadEntity actividad, Long id) {
+  private static ActividadResponse actividadResponse(ActividadEntity actividad) {
     return new ActividadResponse(
-        id,
+        actividad.actividadId(),
         actividad.titulo(),
         actividad.descripcion(),
         actividad.tipo().name(),

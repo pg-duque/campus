@@ -11,7 +11,7 @@ import java.util.List;
 
 @Document(collection = "actividades")
 public record ActividadEntity(
-        @Id String id,
+        @Id String actividadId,
 
         @NotBlank(message = "El título es obligatorio")
         String titulo,
@@ -22,7 +22,7 @@ public record ActividadEntity(
         TipoActividad tipo,
 
         @Min(value = 1, message = "El número máximo de participantes debe ser mayor que cero")
-        int nmaxParticipantes,
+        Integer nmaxParticipantes,
 
         @NotNull(message = "El docente responsable es obligatorio")
         Long docenteId

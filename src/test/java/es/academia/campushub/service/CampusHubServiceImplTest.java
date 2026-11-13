@@ -2,9 +2,13 @@ package es.academia.campushub.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import es.academia.campushub.controller.dto.ActividadDetalleResponse;
+import es.academia.campushub.controller.dto.CreateSeguimientoRequest;
 import es.academia.campushub.entity.ActividadEntity;
 import es.academia.campushub.entity.ActividadEtiquetaEntity;
 import es.academia.campushub.entity.DepartamentosEntity;
@@ -21,9 +25,11 @@ import es.academia.campushub.repository.EtiquetaRepository;
 import es.academia.campushub.repository.EstudiantesRepository;
 import es.academia.campushub.repository.InscripcionRepository;
 import es.academia.campushub.repository.SeguimientoRepository;
+import es.academia.campushub.util.exception.ResourceNotFoundException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,6 +50,35 @@ class CampusHubServiceImplTest {
   @InjectMocks private CampusHubServiceImpl service;
 
   @Test
+  void seguimientoNoSeGuardaCuandoLaActividadNoExiste() {
+    when(actividadRepository.existsById(999L)).thenReturn(false);
+
+    assertThrows(ResourceNotFoundException.class,
+        () -> service.registrarSeguimiento(999L,
+            new CreateSeguimientoRequest("VISITA", Map.of("empresa", "Acme"))));
+
+    verifyNoInteractions(seguimientoRepository);
+  }
+
+  @Test
+  void seguimientoConservaTiposLibresYDatosAnidadosParaUnaActividadExistente() {
+    when(actividadRepository.existsById(7L)).thenReturn(true);
+    when(seguimientoRepository.save(any(SeguimientoEntity.class)))
+        .thenAnswer(invocacion -> invocacion.getArgument(0));
+    Map<String, Object> datos = Map.of(
+        "empresa", "Acme", "detalle", Map.of("confirmado", true),
+        "observaciones", List.of("aprendizaje", "visita"));
+
+    var respuesta = service.registrarSeguimiento(7L,
+        new CreateSeguimientoRequest("NUEVO_TIPO", datos));
+
+    assertEquals(7L, respuesta.actividadId());
+    assertEquals("NUEVO_TIPO", respuesta.tipo());
+    assertEquals(datos, respuesta.datos());
+    assertNotNull(Instant.parse(respuesta.creadoEn()));
+  }
+
+  @Test
   void detalleCombinaActividadDocenteInscripcionesEtiquetasYSeguimientos() {
     DocenteEntity docente = docente();
     EstudiantesEntity estudiante =
@@ -51,7 +86,7 @@ class CampusHubServiceImplTest {
             23L, "Alicia", "Ruiz", "alicia@example.test", LocalDate.of(2005, 2, 3));
     ActividadEntity actividad =
         new ActividadEntity(
-            7L, "Taller", "Práctica", TipoActividad.TALLERER_PRECTICOS, "2027-05-01", 4, 12L);
+            7L, "Taller", "Práctica", TipoActividad.TALLER, "2027-05-01", 4, 12L);
     SeguimientoEntity seguimiento =
         new SeguimientoEntity(7L, "TALLER", java.util.Map.of("lenguaje", "Java"), Instant.EPOCH);
     EtiquetaEntity etiqueta = new EtiquetaEntity(31L, "programación");
@@ -70,6 +105,7 @@ class CampusHubServiceImplTest {
     ActividadDetalleResponse detalle = service.detalle(7L);
 
     assertEquals("Taller", detalle.actividad().titulo());
+    assertEquals("TALLER", detalle.actividad().tipo());
     assertEquals("2027-05-01", detalle.actividad().fechaPrevista());
     assertEquals(12L, detalle.responsable().id());
     assertEquals(1, detalle.plazasOcupadas());
@@ -85,7 +121,7 @@ class CampusHubServiceImplTest {
         .thenReturn(
             Optional.of(
                 new ActividadEntity(
-                    8L, "Charla", null, TipoActividad.CHARLAS, "2027-06-01", 10, 12L)));
+                    8L, "Charla", null, TipoActividad.CHARLA, "2027-06-01", 10, 12L)));
     when(docenteRepository.findById(12L)).thenReturn(Optional.of(docente()));
     when(inscripcionRepository.findByActividadIdOrderByFechaInscripcionAsc(8L))
         .thenReturn(List.of());

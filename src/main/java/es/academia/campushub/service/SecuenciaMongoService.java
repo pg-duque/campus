@@ -1,4 +1,4 @@
-package es.academia.campushub.repository;
+package es.academia.campushub.service;
 
 import es.academia.campushub.document.SecuenciaMongo;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
@@ -6,9 +6,9 @@ import org.springframework.data.mongodb.core.MongoOperations;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
 public class SecuenciaMongoService {
   private final MongoOperations mongo;
 
@@ -17,7 +17,6 @@ public class SecuenciaMongoService {
   }
 
   public Long siguiente(String coleccion) {
-    // El incremento se realiza en MongoDB de forma atómica, incluso con varias peticiones.
     SecuenciaMongo secuencia = mongo.findAndModify(
         Query.query(Criteria.where("_id").is(coleccion)),
         new Update().inc("valor", 1L),

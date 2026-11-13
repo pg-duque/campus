@@ -107,6 +107,9 @@ public class CampusHubServiceImpl implements CampusHubService {
     if (request.datos() == null) {
       throw new InvalidInputException("Los datos del seguimiento son obligatorios");
     }
+    if (!actividadRepository.existsById(actividadId)) {
+      throw new ResourceNotFoundException("No existe la actividad indicada");
+    }
 
     SeguimientoEntity guardado =
         seguimientoRepository.save(

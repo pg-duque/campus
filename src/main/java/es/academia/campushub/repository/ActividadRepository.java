@@ -7,7 +7,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.List;
 
 
-public interface ActividadRepository extends MongoRepository<ActividadEntity, Long> {
+public interface ActividadRepository extends MongoRepository<ActividadEntity, String> {
 
     List<ActividadEntity> findByTipo(TipoActividad tipo);
     List<ActividadEntity> findByDocenteId(Long docenteId);

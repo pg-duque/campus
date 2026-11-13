@@ -48,6 +48,10 @@ permite recuperar el historial cronológicamente.
 
 En el detalle: una actividad sin inscripciones, etiquetas o seguimientos debe devolver listas
 vacías, no `null`. Las plazas disponibles se calculan como capacidad - ocupadas.
+El detalle agrega actividad y seguimientos desde MongoDB, docente y estudiantes desde PostgreSQL,
+y las etiquetas vinculando sus IDs almacenados en MongoDB con sus datos en PostgreSQL. Las plazas
+ocupadas se calculan a partir de las inscripciones recuperadas para que coincidan con los
+estudiantes incluidos en la misma respuesta.
 
 ## Decisión deliberada: DTO sin Bean Validation exhaustiva
 

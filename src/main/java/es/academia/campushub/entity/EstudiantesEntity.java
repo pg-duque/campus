@@ -75,6 +75,14 @@ public class EstudiantesEntity {
         return fechaNacimiento;
     }
 
+    public String getApellidos() {
+        return apellidos;
+    }
+
+    public Long getGrupoId() {
+        return grupo == null ? null : grupo.getId();
+    }
+
     public void setFechaNacimiento(LocalDate fechaNacimiento) {
         this.fechaNacimiento = fechaNacimiento;
     }

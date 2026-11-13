@@ -61,4 +61,12 @@ public class DocenteEntity {
     public void setDocenteCorreoElectronico(String docenteCorreoElectronico) {
         this.docenteCorreoElectronico = docenteCorreoElectronico;
     }
+
+    public DepartamentosEntity getDepartamento() {
+        return departamento;
+    }
+
+    public void setDepartamento(DepartamentosEntity departamento) {
+        this.departamento = departamento;
+    }
 }

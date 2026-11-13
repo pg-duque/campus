@@ -19,6 +19,8 @@ public record ActividadEntity(
         @NotNull(message = "El tipo de actividad es obligatorio")
         TipoActividad tipo,
 
+        String fechaPrevista,
+
         @Min(value = 1, message = "El número máximo de participantes debe ser mayor que cero")
         int maxParticipantes,
 

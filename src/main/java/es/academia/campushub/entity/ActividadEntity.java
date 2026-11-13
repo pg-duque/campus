@@ -22,7 +22,7 @@ public record ActividadEntity(
         TipoActividad tipo,
 
         @Min(value = 1, message = "El número máximo de participantes debe ser mayor que cero")
-        Integer nmaxParticipantes,
+        Integer maxParticipantes,
 
         @NotNull(message = "El docente responsable es obligatorio")
         Long docenteId

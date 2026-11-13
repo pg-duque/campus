@@ -8,5 +8,7 @@ public interface ActividadEtiquetaRepository
     extends MongoRepository<ActividadEtiquetaEntity, String> {
   List<ActividadEtiquetaEntity> findByActividadId(Long actividadId);
 
+  List<ActividadEtiquetaEntity> findByEtiquetaId(Long etiquetaId);
+
   boolean existsByActividadIdAndEtiquetaId(Long actividadId, Long etiquetaId);
 }

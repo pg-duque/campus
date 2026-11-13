@@ -6,4 +6,10 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface InscripcionRepository extends MongoRepository<InscripcionEntity, Long> {
   List<InscripcionEntity> findByActividadIdOrderByFechaInscripcionAsc(Long actividadId);
+
+  boolean existsByActividadIdAndEstudianteId(Long actividadId, Long estudianteId);
+
+  long countByActividadId(Long actividadId);
+
+  List<InscripcionEntity> findByEstudianteIdOrderByFechaInscripcionAsc(Long estudianteId);
 }

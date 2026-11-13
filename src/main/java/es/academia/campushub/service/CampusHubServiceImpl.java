@@ -4,21 +4,26 @@ import es.academia.campushub.controller.dto.*;
 import es.academia.campushub.entity.ActividadEntity;
 import es.academia.campushub.entity.ActividadEtiquetaEntity;
 import es.academia.campushub.entity.ContactoEntity;
+import es.academia.campushub.entity.DepartamentosEntity;
 import es.academia.campushub.entity.DocenteEntity;
 import es.academia.campushub.entity.EtiquetaEntity;
 import es.academia.campushub.entity.EstudiantesEntity;
+import es.academia.campushub.entity.GruposEntity;
 import es.academia.campushub.entity.InscripcionEntity;
 import es.academia.campushub.entity.SeguimientoEntity;
+import es.academia.campushub.entity.enums.TipoActividad;
 import es.academia.campushub.repository.ActividadEtiquetaRepository;
 import es.academia.campushub.repository.ActividadRepository;
 import es.academia.campushub.repository.ContactoRepository;
+import es.academia.campushub.repository.DepartamentosRepository;
 import es.academia.campushub.repository.DocenteRepository;
 import es.academia.campushub.repository.EtiquetaRepository;
 import es.academia.campushub.repository.EstudiantesRepository;
+import es.academia.campushub.repository.GruposRepository;
 import es.academia.campushub.repository.InscripcionRepository;
 import es.academia.campushub.repository.SeguimientoRepository;
 import es.academia.campushub.util.exception.InvalidInputException;
-import es.academia.campushub.util.exception.PersistenciaPendienteException;
+import es.academia.campushub.util.exception.BusinessConflictException;
 import es.academia.campushub.util.exception.ResourceNotFoundException;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -40,6 +45,9 @@ public class CampusHubServiceImpl implements CampusHubService {
   private final ActividadEtiquetaRepository actividadEtiquetaRepository;
   private final EtiquetaRepository etiquetaRepository;
   private final ContactoRepository contactoRepository;
+  private final DepartamentosRepository departamentosRepository;
+  private final GruposRepository gruposRepository;
+  private final SecuenciaMongoService secuencias;
 
   public CampusHubServiceImpl(
       ActividadRepository actividadRepository,
@@ -49,7 +57,10 @@ public class CampusHubServiceImpl implements CampusHubService {
       SeguimientoRepository seguimientoRepository,
       ActividadEtiquetaRepository actividadEtiquetaRepository,
       EtiquetaRepository etiquetaRepository,
-      ContactoRepository contactoRepository) {
+      ContactoRepository contactoRepository,
+      DepartamentosRepository departamentosRepository,
+      GruposRepository gruposRepository,
+      SecuenciaMongoService secuencias) {
     this.actividadRepository = actividadRepository;
     this.docenteRepository = docenteRepository;
     this.inscripcionRepository = inscripcionRepository;
@@ -58,56 +69,138 @@ public class CampusHubServiceImpl implements CampusHubService {
     this.actividadEtiquetaRepository = actividadEtiquetaRepository;
     this.etiquetaRepository = etiquetaRepository;
     this.contactoRepository = contactoRepository;
+    this.departamentosRepository = departamentosRepository;
+    this.gruposRepository = gruposRepository;
+    this.secuencias = secuencias;
   }
 
   @Override
   public GrupoResponse crearGrupo(CreateGrupoRequest request) {
-    throw new PersistenciaPendienteException("crearGrupo");
+    String nombre = textoObligatorio(request.nombre(), "El nombre del grupo", 100);
+    String nivel = textoObligatorio(request.nivel(), "El nivel del grupo", 100);
+    DocenteEntity tutor = buscarDocente(request.tutorDocenteId());
+    GruposEntity grupo = new GruposEntity();
+    grupo.setNombre(nombre);
+    grupo.setNivel(nivel);
+    grupo.setDocenteTutor(tutor);
+    GruposEntity guardado = gruposRepository.saveAndFlush(grupo);
+    return new GrupoResponse(guardado.getId(), guardado.getNombre(), guardado.getNivel(),
+        guardado.getDocenteTutor().getDocenteId());
   }
 
   @Override
   public DepartamentoResponse crearDepartamento(CreateDepartamentoRequest request) {
-    throw new PersistenciaPendienteException("crearDepartamento");
+    String nombre = textoObligatorio(request.nombre(), "El nombre del departamento", 100);
+    if (departamentosRepository.existsByNombre(nombre)) {
+      throw new BusinessConflictException("Ya existe un departamento con ese nombre");
+    }
+    DepartamentosEntity departamento = new DepartamentosEntity();
+    departamento.setNombre(nombre);
+    DepartamentosEntity guardado = departamentosRepository.saveAndFlush(departamento);
+    return new DepartamentoResponse(guardado.getId(), guardado.getNombre());
   }
 
   @Override
   public EstudianteResponse crearEstudiante(CreateEstudianteRequest request) {
-    throw new PersistenciaPendienteException("crearEstudiante");
+    String nombre = textoObligatorio(request.nombre(), "El nombre del estudiante", 100);
+    String apellidos = textoObligatorio(request.apellidos(), "Los apellidos del estudiante", 100);
+    String email = validarEmail(request.email(), 50);
+    LocalDate fechaNacimiento = validarFecha(request.fechaNacimiento(), "La fecha de nacimiento");
+    if (estudiantesRepository.existsByEmail(email)) {
+      throw new BusinessConflictException("Ya existe un estudiante con ese email");
+    }
+    EstudiantesEntity estudiante = new EstudiantesEntity(null, nombre, apellidos, email, fechaNacimiento);
+    if (request.grupoId() != null) {
+      validarId(request.grupoId());
+      GruposEntity grupo = gruposRepository.findById(request.grupoId())
+          .orElseThrow(() -> new ResourceNotFoundException("No existe el grupo indicado"));
+      estudiante.setGrupo(grupo);
+    }
+    return estudianteResponse(estudiantesRepository.saveAndFlush(estudiante));
   }
 
   @Override
   public EstudianteResponse obtenerEstudiante(Long id) {
-    throw new PersistenciaPendienteException("obtenerEstudiante");
+    validarId(id);
+    EstudiantesEntity estudiante = estudiantesRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("No existe el estudiante indicado"));
+    return estudianteResponse(estudiante);
   }
 
   @Override
   public DocenteResponse crearDocente(CreateDocenteRequest request) {
-    throw new PersistenciaPendienteException("crearDocente");
+    String nombre = textoObligatorio(request.nombre(), "El nombre del docente", 250);
+    String apellidos = textoObligatorio(request.apellidos(), "Los apellidos del docente", 250);
+    String email = validarEmail(request.email(), 250);
+    if (docenteRepository.existsByDocenteCorreoElectronico(email)) {
+      throw new BusinessConflictException("Ya existe un docente con ese email");
+    }
+    DocenteEntity docente = new DocenteEntity();
+    docente.setDocenteNombre(nombre);
+    docente.setDocenteApellido(apellidos);
+    docente.setDocenteCorreoElectronico(email);
+    if (request.departamentoId() != null) {
+      validarId(request.departamentoId());
+      DepartamentosEntity departamento = departamentosRepository.findById(request.departamentoId())
+          .orElseThrow(() -> new ResourceNotFoundException("No existe el departamento indicado"));
+      docente.setDepartamento(departamento);
+    }
+    return docenteResponse(docenteRepository.saveAndFlush(docente));
   }
 
   @Override
   public ActividadResponse crearActividad(CreateActividadRequest request) {
-    throw new PersistenciaPendienteException("crearActividad");
+    String titulo = textoObligatorio(request.titulo(), "El título", 250);
+    TipoActividad tipo;
+    try {
+      tipo = TipoActividad.valueOf(textoObligatorio(request.tipo(), "El tipo de actividad", 100));
+    } catch (IllegalArgumentException ex) {
+      throw new InvalidInputException("El tipo de actividad no es válido");
+    }
+    validarFecha(request.fechaPrevista(), "La fecha prevista");
+    if (request.maxParticipantes() == null || request.maxParticipantes() < 1) {
+      throw new InvalidInputException("El número máximo de participantes debe ser mayor que cero");
+    }
+    buscarDocente(request.docenteId());
+    Long id = secuencias.siguiente("actividades");
+    ActividadEntity actividad = new ActividadEntity(id, titulo, request.descripcion(), tipo,
+        request.fechaPrevista(), request.maxParticipantes(), request.docenteId());
+    return actividadResponse(actividadRepository.save(actividad));
   }
 
   @Override
   public ActividadResponse obtenerActividad(Long id) {
-    throw new PersistenciaPendienteException("obtenerActividad");
+    return actividadResponse(buscarActividad(id));
   }
 
   @Override
-  public InscripcionResponse inscribir(Long actividadId, CreateInscripcionRequest request) {
-    throw new PersistenciaPendienteException("inscribir");
+  public synchronized InscripcionResponse inscribir(Long actividadId, CreateInscripcionRequest request) {
+    // Dentro de esta aplicación, ninguna otra inscripción comprueba las plazas hasta terminar esta.
+    ActividadEntity actividad = buscarActividad(actividadId);
+    comprobarEstudiante(request.estudianteId());
+    if (inscripcionRepository.existsByActividadIdAndEstudianteId(actividadId, request.estudianteId())) {
+      throw new BusinessConflictException("El estudiante ya está inscrito en esta actividad");
+    }
+    if (inscripcionRepository.countByActividadId(actividadId) >= actividad.maxParticipantes()) {
+      throw new BusinessConflictException("No quedan plazas disponibles en la actividad");
+    }
+    InscripcionEntity inscripcion = new InscripcionEntity(actividadId, request.estudianteId());
+    inscripcion.setId(secuencias.siguiente("inscripciones"));
+    InscripcionEntity guardada = inscripcionRepository.save(inscripcion);
+    return new InscripcionResponse(guardada.getId(), guardada.getActividadId(),
+        guardada.getEstudianteId(), guardada.getFechaInscripcion().toString());
   }
 
   @Override
   public List<EstudianteResponse> participantes(Long actividadId) {
-    throw new PersistenciaPendienteException("participantes");
+    buscarActividad(actividadId);
+    return obtenerEstudiantes(inscripcionRepository.findByActividadIdOrderByFechaInscripcionAsc(actividadId));
   }
 
   @Override
   public SeguimientoResponse registrarSeguimiento(
       Long actividadId, CreateSeguimientoRequest request) {
+    validarId(actividadId);
     if (request.tipo() == null || request.tipo().isBlank()) {
       throw new InvalidInputException("El tipo de seguimiento es obligatorio");
     }
@@ -126,6 +219,14 @@ public class CampusHubServiceImpl implements CampusHubService {
 
   @Override
   public List<SeguimientoResponse> seguimientos(Long actividadId) {
+    validarId(actividadId);
+    if (!actividadRepository.existsById(actividadId)) {
+      throw new ResourceNotFoundException("No existe la actividad indicada");
+    }
+    return obtenerSeguimientos(actividadId);
+  }
+
+  private List<SeguimientoResponse> obtenerSeguimientos(Long actividadId) {
     return seguimientoRepository.findByActividadIdOrderByCreadoEnAsc(actividadId).stream()
         .map(CampusHubServiceImpl::seguimientoResponse)
         .toList();
@@ -134,10 +235,7 @@ public class CampusHubServiceImpl implements CampusHubService {
   @Override
   public ActividadDetalleResponse detalle(Long id) {
     Long actividadId = id;
-    ActividadEntity actividad =
-        actividadRepository
-            .findById(actividadId)
-            .orElseThrow(() -> new ResourceNotFoundException("No existe la actividad indicada"));
+    ActividadEntity actividad = buscarActividad(actividadId);
     DocenteEntity docente =
         docenteRepository
             .findById(actividad.docenteId())
@@ -150,7 +248,7 @@ public class CampusHubServiceImpl implements CampusHubService {
     int ocupadas = inscripciones.size();
 
     List<EtiquetaResponse> etiquetas = obtenerEtiquetas(actividadId);
-    List<SeguimientoResponse> seguimientos = seguimientos(id);
+    List<SeguimientoResponse> seguimientos = obtenerSeguimientos(id);
     return new ActividadDetalleResponse(
         actividadResponse(actividad),
         docenteResponse(docente),
@@ -163,7 +261,17 @@ public class CampusHubServiceImpl implements CampusHubService {
 
   @Override
   public List<ActividadHistorialResponse> historial(Long estudianteId) {
-    throw new PersistenciaPendienteException("historial");
+    comprobarEstudiante(estudianteId);
+    List<ActividadHistorialResponse> historial = new ArrayList<>();
+    for (InscripcionEntity inscripcion :
+        inscripcionRepository.findByEstudianteIdOrderByFechaInscripcionAsc(estudianteId)) {
+      ActividadEntity actividad = buscarActividad(inscripcion.getActividadId());
+      DocenteEntity docente = buscarDocente(actividad.docenteId());
+      historial.add(new ActividadHistorialResponse(actividad.actividadId(), actividad.titulo(),
+          actividad.tipo().name(), actividad.fechaPrevista(),
+          inscripcion.getFechaInscripcion().toString(), docenteResponse(docente)));
+    }
+    return historial;
   }
 
   @Override
@@ -207,29 +315,87 @@ public class CampusHubServiceImpl implements CampusHubService {
 
   @Override
   public EtiquetaResponse crearEtiqueta(CreateEtiquetaRequest request) {
-    if (request.nombre() == null || request.nombre().isBlank()) {
-      throw new InvalidInputException("El nombre de la etiqueta es obligatorio");
-    }
-    EtiquetaEntity guardada = etiquetaRepository.saveAndFlush(new EtiquetaEntity(request.nombre()));
+    String nombre = textoObligatorio(request.nombre(), "El nombre de la etiqueta", 100);
+    EtiquetaEntity guardada = etiquetaRepository.saveAndFlush(new EtiquetaEntity(nombre));
     return new EtiquetaResponse(guardada.getId(), guardada.getNombre());
   }
 
   @Override
   public void asociarEtiqueta(Long actividadId, Long etiquetaId) {
+    validarId(actividadId);
+    validarId(etiquetaId);
     if (!actividadRepository.existsById(actividadId)) {
       throw new ResourceNotFoundException("No existe la actividad indicada");
     }
     if (!etiquetaRepository.existsById(etiquetaId)) {
       throw new ResourceNotFoundException("No existe la etiqueta indicada");
     }
+    // El ID compuesto hace que repetir la misma asociación guarde la misma relación.
     if (!actividadEtiquetaRepository.existsByActividadIdAndEtiquetaId(actividadId, etiquetaId)) {
-      actividadEtiquetaRepository.save(new ActividadEtiquetaEntity(actividadId, etiquetaId));
+      actividadEtiquetaRepository.save(new ActividadEtiquetaEntity(
+          actividadId + ":" + etiquetaId, actividadId, etiquetaId));
     }
   }
 
   @Override
   public List<ActividadResponse> actividadesPorEtiqueta(Long etiquetaId) {
-    throw new PersistenciaPendienteException("actividadesPorEtiqueta");
+    validarId(etiquetaId);
+    if (!etiquetaRepository.existsById(etiquetaId)) {
+      throw new ResourceNotFoundException("No existe la etiqueta indicada");
+    }
+    List<ActividadResponse> actividades = new ArrayList<>();
+    for (ActividadEtiquetaEntity relacion : actividadEtiquetaRepository.findByEtiquetaId(etiquetaId)) {
+      actividades.add(actividadResponse(buscarActividad(relacion.actividadId())));
+    }
+    return actividades;
+  }
+
+  private ActividadEntity buscarActividad(Long id) {
+    validarId(id);
+    return actividadRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("No existe la actividad indicada"));
+  }
+
+  private DocenteEntity buscarDocente(Long id) {
+    validarId(id);
+    return docenteRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("No existe el docente indicado"));
+  }
+
+  private static void validarId(Long id) {
+    if (id == null || id <= 0) {
+      throw new InvalidInputException("El identificador debe ser un número positivo");
+    }
+  }
+
+  private static String textoObligatorio(String valor, String campo, int longitudMaxima) {
+    if (valor == null || valor.isBlank()) {
+      throw new InvalidInputException(campo + " no puede estar vacío");
+    }
+    String texto = valor.strip();
+    if (texto.length() > longitudMaxima) {
+      throw new InvalidInputException(campo + " no puede superar " + longitudMaxima + " caracteres");
+    }
+    return texto;
+  }
+
+  private static String validarEmail(String valor, int longitudMaxima) {
+    String email = textoObligatorio(valor, "El email", longitudMaxima);
+    if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+      throw new InvalidInputException("El formato del email no es válido");
+    }
+    return email;
+  }
+
+  private static LocalDate validarFecha(String valor, String campo) {
+    if (valor == null) {
+      return null;
+    }
+    try {
+      return LocalDate.parse(valor);
+    } catch (DateTimeParseException ex) {
+      throw new InvalidInputException(campo + " debe ser válida y tener formato YYYY-MM-DD");
+    }
   }
 
   @Override

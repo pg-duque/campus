@@ -16,6 +16,7 @@ Campos `fechaNacimiento`, `fechaPrevista` y `fechaAutorizacion` son strings ISO 
 | POST | `/api/actividades/{id}/inscripciones` | CreateInscripcionRequest | InscripcionResponse | 201 |
 | GET | `/api/actividades/{id}/inscripciones` | — | EstudianteResponse[] | 200 |
 | POST | `/api/actividades/{id}/seguimientos` | CreateSeguimientoRequest | SeguimientoResponse | 201 |
+| GET | `/api/actividades/{id}/seguimientos` | — | SeguimientoResponse[] | 200 |
 | GET | `/api/actividades/{id}/detalle` | — | ActividadDetalleResponse | 200 |
 | GET | `/api/estudiantes/{id}/actividades` | — | ActividadHistorialResponse[] | 200 |
 | PUT | `/api/estudiantes/{id}/contacto` | UpsertContactoRequest | ContactoResponse | 200 |
@@ -32,6 +33,11 @@ visibles en la API son `Long` salvo los registros de seguimiento, cuyo ID es `St
 
 La propiedad `datos` de `CreateSeguimientoRequest` es un objeto JSON de claves libres, para
 permitir distintos seguimientos. Se debe conservar su estructura y permitir recuperarla.
+Los seguimientos se guardan como documentos independientes en MongoDB: `tipo` es texto libre y
+`datos` se conserva como un mapa BSON, sin convertirlo a clases específicas por tipo de actividad.
+Cada alta crea un documento nuevo con su propio instante de creación; así se pueden añadir tipos
+y estructuras sin sobrescribir ni migrar registros anteriores. El índice por actividad y fecha
+permite recuperar el historial cronológicamente.
 
 ## Errores
 

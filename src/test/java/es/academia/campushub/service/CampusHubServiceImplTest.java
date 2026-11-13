@@ -9,8 +9,10 @@ import static org.mockito.Mockito.when;
 
 import es.academia.campushub.controller.dto.ActividadDetalleResponse;
 import es.academia.campushub.controller.dto.CreateSeguimientoRequest;
+import es.academia.campushub.controller.dto.UpsertContactoRequest;
 import es.academia.campushub.entity.ActividadEntity;
 import es.academia.campushub.entity.ActividadEtiquetaEntity;
+import es.academia.campushub.entity.ContactoEntity;
 import es.academia.campushub.entity.DepartamentosEntity;
 import es.academia.campushub.entity.DocenteEntity;
 import es.academia.campushub.entity.EtiquetaEntity;
@@ -20,12 +22,14 @@ import es.academia.campushub.entity.SeguimientoEntity;
 import es.academia.campushub.entity.enums.TipoActividad;
 import es.academia.campushub.repository.ActividadEtiquetaRepository;
 import es.academia.campushub.repository.ActividadRepository;
+import es.academia.campushub.repository.ContactoRepository;
 import es.academia.campushub.repository.DocenteRepository;
 import es.academia.campushub.repository.EtiquetaRepository;
 import es.academia.campushub.repository.EstudiantesRepository;
 import es.academia.campushub.repository.InscripcionRepository;
 import es.academia.campushub.repository.SeguimientoRepository;
 import es.academia.campushub.util.exception.ResourceNotFoundException;
+import es.academia.campushub.util.exception.InvalidInputException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -46,8 +50,96 @@ class CampusHubServiceImplTest {
   @Mock private SeguimientoRepository seguimientoRepository;
   @Mock private ActividadEtiquetaRepository actividadEtiquetaRepository;
   @Mock private EtiquetaRepository etiquetaRepository;
+  @Mock private ContactoRepository contactoRepository;
 
   @InjectMocks private CampusHubServiceImpl service;
+
+  @Test
+  void guardarContactoUsaElIdDelEstudianteYConservaTodosLosCampos() {
+    when(estudiantesRepository.existsById(23L)).thenReturn(true);
+    when(contactoRepository.save(any(ContactoEntity.class)))
+        .thenAnswer(invocacion -> invocacion.getArgument(0));
+
+    var respuesta = service.guardarContacto(23L, new UpsertContactoRequest(
+        "Julia Ortiz", "+34 600000000", "julia@test.invalid", true, "2026-10-01"));
+
+    assertEquals(23L, respuesta.estudianteId());
+    assertEquals("Julia Ortiz", respuesta.tutorLegal());
+    assertEquals("+34 600000000", respuesta.telefono());
+    assertEquals("julia@test.invalid", respuesta.email());
+    assertEquals(true, respuesta.autorizado());
+    assertEquals("2026-10-01", respuesta.fechaAutorizacion());
+  }
+
+  @Test
+  void contactoRecuperaLaFichaDelEstudiante() {
+    when(estudiantesRepository.existsById(23L)).thenReturn(true);
+    when(contactoRepository.findById(23L)).thenReturn(Optional.of(new ContactoEntity(
+        23L, "Julia Ortiz", "600000000", "julia@test.invalid", true, "2026-10-01")));
+
+    var respuesta = service.contacto(23L);
+
+    assertEquals(23L, respuesta.estudianteId());
+    assertEquals("Julia Ortiz", respuesta.tutorLegal());
+    assertEquals("600000000", respuesta.telefono());
+    assertEquals("julia@test.invalid", respuesta.email());
+    assertEquals(true, respuesta.autorizado());
+    assertEquals("2026-10-01", respuesta.fechaAutorizacion());
+  }
+
+  @Test
+  void contactoDeEstudianteInexistenteNoAccedeARedis() {
+    when(estudiantesRepository.existsById(999L)).thenReturn(false);
+    var request = new UpsertContactoRequest("Julia", "600000000", null, false, null);
+
+    assertThrows(ResourceNotFoundException.class, () -> service.guardarContacto(999L, request));
+    assertThrows(ResourceNotFoundException.class, () -> service.contacto(999L));
+
+    verifyNoInteractions(contactoRepository);
+  }
+
+  @Test
+  void contactoSinFichaDevuelveNoEncontrado() {
+    when(estudiantesRepository.existsById(23L)).thenReturn(true);
+    when(contactoRepository.findById(23L)).thenReturn(Optional.empty());
+
+    assertThrows(ResourceNotFoundException.class, () -> service.contacto(23L));
+  }
+
+  @Test
+  void guardarContactoRechazaFechasImposiblesOConFormatoIncorrecto() {
+    when(estudiantesRepository.existsById(23L)).thenReturn(true);
+    for (String fecha : List.of("2026-02-30", "13/11/2026", "")) {
+      var request = new UpsertContactoRequest("Julia", "600000000", null, true, fecha);
+      assertThrows(InvalidInputException.class, () -> service.guardarContacto(23L, request));
+    }
+    verifyNoInteractions(contactoRepository);
+  }
+
+  @Test
+  void guardarContactoPermiteFechaAusenteYAutorizacionFalse() {
+    when(estudiantesRepository.existsById(23L)).thenReturn(true);
+    when(contactoRepository.save(any(ContactoEntity.class)))
+        .thenAnswer(invocacion -> invocacion.getArgument(0));
+
+    var respuesta = service.guardarContacto(23L,
+        new UpsertContactoRequest("Julia", "600000000", null, false, null));
+
+    assertEquals(false, respuesta.autorizado());
+    assertEquals(null, respuesta.fechaAutorizacion());
+    assertEquals(null, respuesta.email());
+  }
+
+  @Test
+  void contactoRechazaIdsNulosOCeroONegativos() {
+    Long[] ids = {null, 0L, -1L};
+    var request = new UpsertContactoRequest("Julia", "600000000", null, false, null);
+    for (Long id : ids) {
+      assertThrows(InvalidInputException.class, () -> service.guardarContacto(id, request));
+      assertThrows(InvalidInputException.class, () -> service.contacto(id));
+    }
+    verifyNoInteractions(estudiantesRepository, contactoRepository);
+  }
 
   @Test
   void seguimientoNoSeGuardaCuandoLaActividadNoExiste() {

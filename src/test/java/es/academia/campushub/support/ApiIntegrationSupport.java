@@ -12,6 +12,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mongodb.MongoDBContainer;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -24,12 +25,18 @@ public abstract class ApiIntegrationSupport {
 
   @Container static final MongoDBContainer MONGO_DB_CONTAINER = new MongoDBContainer("mongo:8");
 
+  @Container
+  static final GenericContainer<?> REDIS_CONTAINER =
+      new GenericContainer<>("redis:8-alpine").withExposedPorts(6379);
+
   @DynamicPropertySource
   static void props(DynamicPropertyRegistry r) {
     r.add("spring.datasource.url", POSTGRE_SQL_CONTAINER::getJdbcUrl);
     r.add("spring.datasource.username", POSTGRE_SQL_CONTAINER::getUsername);
     r.add("spring.datasource.password", POSTGRE_SQL_CONTAINER::getPassword);
     r.add("spring.mongodb.uri", MONGO_DB_CONTAINER::getReplicaSetUrl);
+    r.add("spring.data.redis.host", REDIS_CONTAINER::getHost);
+    r.add("spring.data.redis.port", () -> REDIS_CONTAINER.getMappedPort(6379));
   }
 
   @LocalServerPort int port;

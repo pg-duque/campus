@@ -3,6 +3,7 @@ package es.academia.campushub.service;
 import es.academia.campushub.controller.dto.*;
 import es.academia.campushub.entity.ActividadEntity;
 import es.academia.campushub.entity.ActividadEtiquetaEntity;
+import es.academia.campushub.entity.ContactoEntity;
 import es.academia.campushub.entity.DocenteEntity;
 import es.academia.campushub.entity.EtiquetaEntity;
 import es.academia.campushub.entity.EstudiantesEntity;
@@ -10,6 +11,7 @@ import es.academia.campushub.entity.InscripcionEntity;
 import es.academia.campushub.entity.SeguimientoEntity;
 import es.academia.campushub.repository.ActividadEtiquetaRepository;
 import es.academia.campushub.repository.ActividadRepository;
+import es.academia.campushub.repository.ContactoRepository;
 import es.academia.campushub.repository.DocenteRepository;
 import es.academia.campushub.repository.EtiquetaRepository;
 import es.academia.campushub.repository.EstudiantesRepository;
@@ -19,6 +21,8 @@ import es.academia.campushub.util.exception.InvalidInputException;
 import es.academia.campushub.util.exception.PersistenciaPendienteException;
 import es.academia.campushub.util.exception.ResourceNotFoundException;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +39,7 @@ public class CampusHubServiceImpl implements CampusHubService {
   private final SeguimientoRepository seguimientoRepository;
   private final ActividadEtiquetaRepository actividadEtiquetaRepository;
   private final EtiquetaRepository etiquetaRepository;
+  private final ContactoRepository contactoRepository;
 
   public CampusHubServiceImpl(
       ActividadRepository actividadRepository,
@@ -43,7 +48,8 @@ public class CampusHubServiceImpl implements CampusHubService {
       EstudiantesRepository estudiantesRepository,
       SeguimientoRepository seguimientoRepository,
       ActividadEtiquetaRepository actividadEtiquetaRepository,
-      EtiquetaRepository etiquetaRepository) {
+      EtiquetaRepository etiquetaRepository,
+      ContactoRepository contactoRepository) {
     this.actividadRepository = actividadRepository;
     this.docenteRepository = docenteRepository;
     this.inscripcionRepository = inscripcionRepository;
@@ -51,6 +57,7 @@ public class CampusHubServiceImpl implements CampusHubService {
     this.seguimientoRepository = seguimientoRepository;
     this.actividadEtiquetaRepository = actividadEtiquetaRepository;
     this.etiquetaRepository = etiquetaRepository;
+    this.contactoRepository = contactoRepository;
   }
 
   @Override
@@ -161,12 +168,41 @@ public class CampusHubServiceImpl implements CampusHubService {
 
   @Override
   public ContactoResponse guardarContacto(Long estudianteId, UpsertContactoRequest request) {
-    throw new PersistenciaPendienteException("guardarContacto");
+    comprobarEstudiante(estudianteId);
+    if (request.fechaAutorizacion() != null) {
+      try {
+        LocalDate.parse(request.fechaAutorizacion());
+      } catch (DateTimeParseException ex) {
+        throw new InvalidInputException("La fecha de autorización debe ser válida y tener formato YYYY-MM-DD");
+      }
+    }
+    ContactoEntity guardado = contactoRepository.save(new ContactoEntity(
+        estudianteId, request.tutorLegal(), request.telefono(), request.email(),
+        request.autorizado(), request.fechaAutorizacion()));
+    return contactoResponse(guardado);
   }
 
   @Override
   public ContactoResponse contacto(Long estudianteId) {
-    throw new PersistenciaPendienteException("contacto");
+    comprobarEstudiante(estudianteId);
+    ContactoEntity contacto = contactoRepository.findById(estudianteId)
+        .orElseThrow(() -> new ResourceNotFoundException("El estudiante no tiene ficha de contacto"));
+    return contactoResponse(contacto);
+  }
+
+  private void comprobarEstudiante(Long estudianteId) {
+    if (estudianteId == null || estudianteId <= 0) {
+      throw new InvalidInputException("El identificador del estudiante debe ser un número positivo");
+    }
+    if (!estudiantesRepository.existsById(estudianteId)) {
+      throw new ResourceNotFoundException("No existe el estudiante indicado");
+    }
+  }
+
+  private static ContactoResponse contactoResponse(ContactoEntity contacto) {
+    return new ContactoResponse(
+        contacto.getEstudianteId(), contacto.getTutorLegal(), contacto.getTelefono(),
+        contacto.getEmail(), contacto.getAutorizado(), contacto.getFechaAutorizacion());
   }
 
   @Override

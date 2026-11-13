@@ -7,8 +7,6 @@ import jakarta.validation.constraints.NotNull;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.util.List;
-
 @Document(collection = "actividades")
 public record ActividadEntity(
         @Id String id,
@@ -22,7 +20,7 @@ public record ActividadEntity(
         TipoActividad tipo,
 
         @Min(value = 1, message = "El número máximo de participantes debe ser mayor que cero")
-        int nmaxParticipantes,
+        int maxParticipantes,
 
         @NotNull(message = "El docente responsable es obligatorio")
         Long docenteId

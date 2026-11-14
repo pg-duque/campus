@@ -106,6 +106,9 @@ public class CampusHubServiceImpl implements CampusHubService {
     String apellidos = textoObligatorio(request.apellidos(), "Los apellidos del estudiante", 100);
     String email = validarEmail(request.email(), 50);
     LocalDate fechaNacimiento = validarFecha(request.fechaNacimiento(), "La fecha de nacimiento");
+    if (fechaNacimiento != null && !fechaNacimiento.isBefore(LocalDate.now())) {
+      throw new InvalidInputException("La fecha de nacimiento debe ser anterior a hoy");
+    }
     if (estudiantesRepository.existsByEmail(email)) {
       throw new BusinessConflictException("Ya existe un estudiante con ese email");
     }

@@ -5,7 +5,9 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "estudiantes")
+@Table(name = "estudiantes", check = @CheckConstraint(
+        name = "ck_estudiantes_fecha_nacimiento_pasada",
+        constraint = "fecha_nacimiento < CURRENT_DATE"))
 public class EstudiantesEntity {
 
     @Id
@@ -21,7 +23,7 @@ public class EstudiantesEntity {
     @Column(name = "email", nullable = false, length = 50, unique = true)
     private String email;
 
-    @Column(name = "fecha_nacimiento", length = 50)
+    @Column(name = "fecha_nacimiento")
     private LocalDate fechaNacimiento;
 
     @ManyToOne

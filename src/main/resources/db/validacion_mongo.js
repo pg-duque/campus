@@ -13,13 +13,12 @@
       nombre: "actividades",
       esquema: {
         bsonType: "object",
-        required: ["_id", "titulo", "tipo", "maxParticipantes", "docenteId"],
+        required: ["_id", "titulo", "descripcion", "tipo", "fechaPrevista", "maxParticipantes", "docenteId"],
         properties: {
           _id: idNumerico,
           titulo: { bsonType: "string", minLength: 1, maxLength: 250, pattern: "\\S" },
-          // Siguen siendo opcionales, como en el servicio actual.
-          descripcion: { bsonType: ["string", "null"] },
-          fechaPrevista: { bsonType: ["string", "null"], pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+          descripcion: { bsonType: "string", minLength: 1, pattern: "\\S" },
+          fechaPrevista: { bsonType: "string", pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
           tipo: { bsonType: "string", enum: ["TALLER", "CHARLA", "VISITA", "JORNADAS_TECNOLOGICAS"] },
           maxParticipantes: { bsonType: "int", minimum: 1 },
           docenteId: idNumerico

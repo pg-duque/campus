@@ -23,11 +23,11 @@ public class EstudiantesEntity {
     @Column(name = "email", nullable = false, length = 50, unique = true)
     private String email;
 
-    @Column(name = "fecha_nacimiento")
+    @Column(name = "fecha_nacimiento", nullable = false)
     private LocalDate fechaNacimiento;
 
-    @ManyToOne
-    @JoinColumn(name = "grupo_id")
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "grupo_id", nullable = false)
     private GruposEntity grupo;
 
     public EstudiantesEntity() {

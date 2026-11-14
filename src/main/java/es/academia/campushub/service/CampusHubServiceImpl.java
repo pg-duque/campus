@@ -106,19 +106,17 @@ public class CampusHubServiceImpl implements CampusHubService {
     String apellidos = textoObligatorio(request.apellidos(), "Los apellidos del estudiante", 100);
     String email = validarEmail(request.email(), 50);
     LocalDate fechaNacimiento = validarFecha(request.fechaNacimiento(), "La fecha de nacimiento");
-    if (fechaNacimiento != null && !fechaNacimiento.isBefore(LocalDate.now())) {
+    if (!fechaNacimiento.isBefore(LocalDate.now())) {
       throw new InvalidInputException("La fecha de nacimiento debe ser anterior a hoy");
     }
+    validarId(request.grupoId());
     if (estudiantesRepository.existsByEmail(email)) {
       throw new BusinessConflictException("Ya existe un estudiante con ese email");
     }
     EstudiantesEntity estudiante = new EstudiantesEntity(null, nombre, apellidos, email, fechaNacimiento);
-    if (request.grupoId() != null) {
-      validarId(request.grupoId());
-      GruposEntity grupo = gruposRepository.findById(request.grupoId())
-          .orElseThrow(() -> new ResourceNotFoundException("No existe el grupo indicado"));
-      estudiante.setGrupo(grupo);
-    }
+    GruposEntity grupo = gruposRepository.findById(request.grupoId())
+        .orElseThrow(() -> new ResourceNotFoundException("No existe el grupo indicado"));
+    estudiante.setGrupo(grupo);
     return estudianteResponse(estudiantesRepository.saveAndFlush(estudiante));
   }
 
@@ -135,6 +133,7 @@ public class CampusHubServiceImpl implements CampusHubService {
     String nombre = textoObligatorio(request.nombre(), "El nombre del docente", 250);
     String apellidos = textoObligatorio(request.apellidos(), "Los apellidos del docente", 250);
     String email = validarEmail(request.email(), 250);
+    validarId(request.departamentoId());
     if (docenteRepository.existsByDocenteCorreoElectronico(email)) {
       throw new BusinessConflictException("Ya existe un docente con ese email");
     }
@@ -142,18 +141,18 @@ public class CampusHubServiceImpl implements CampusHubService {
     docente.setDocenteNombre(nombre);
     docente.setDocenteApellido(apellidos);
     docente.setDocenteCorreoElectronico(email);
-    if (request.departamentoId() != null) {
-      validarId(request.departamentoId());
-      DepartamentosEntity departamento = departamentosRepository.findById(request.departamentoId())
-          .orElseThrow(() -> new ResourceNotFoundException("No existe el departamento indicado"));
-      docente.setDepartamento(departamento);
-    }
+    DepartamentosEntity departamento = departamentosRepository.findById(request.departamentoId())
+        .orElseThrow(() -> new ResourceNotFoundException("No existe el departamento indicado"));
+    docente.setDepartamento(departamento);
     return docenteResponse(docenteRepository.saveAndFlush(docente));
   }
 
   @Override
   public ActividadResponse crearActividad(CreateActividadRequest request) {
     String titulo = textoObligatorio(request.titulo(), "El título", 250);
+    if (request.descripcion() == null || request.descripcion().isBlank()) {
+      throw new InvalidInputException("La descripción es obligatoria");
+    }
     TipoActividad tipo;
     try {
       tipo = TipoActividad.valueOf(textoObligatorio(request.tipo(), "El tipo de actividad", 100));
@@ -391,8 +390,8 @@ public class CampusHubServiceImpl implements CampusHubService {
   }
 
   private static LocalDate validarFecha(String valor, String campo) {
-    if (valor == null) {
-      return null;
+    if (valor == null || valor.isBlank()) {
+      throw new InvalidInputException(campo + " es obligatoria");
     }
     try {
       return LocalDate.parse(valor);

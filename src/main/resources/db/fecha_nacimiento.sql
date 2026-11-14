@@ -1,7 +1,7 @@
 -- Ejecutar después del primer arranque de la aplicación, cuando exista la tabla.
 -- Sirve para bases ya creadas con ddl-auto=update, que puede no añadir los CHECK.
 -- No elimina ni corrige datos. Si hay fechas inválidas, la operación falla.
--- La fecha sigue siendo opcional: NULL no incumple esta restricción.
+-- El CHECK comprueba el valor; campos_obligatorios.sql añade el NOT NULL para impedir fechas ausentes.
 
 BEGIN;
 

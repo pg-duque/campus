@@ -14,11 +14,13 @@ public record ActividadEntity(
         @NotBlank(message = "El título es obligatorio")
         String titulo,
 
+        @NotBlank(message = "La descripción es obligatoria")
         String descripcion,
 
         @NotNull(message = "El tipo de actividad es obligatorio")
         TipoActividad tipo,
 
+        @NotBlank(message = "La fecha prevista es obligatoria")
         String fechaPrevista,
 
         @Min(value = 1, message = "El número máximo de participantes debe ser mayor que cero")

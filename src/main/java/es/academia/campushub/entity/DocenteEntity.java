@@ -26,8 +26,8 @@ public class DocenteEntity {
     @Column(name = "docente_correo_electronico", nullable = false, unique = true, length = 250)
     private String docenteCorreoElectronico;
 
-    @ManyToOne
-    @JoinColumn(name = "departamento_id")
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "departamento_id", nullable = false)
     private DepartamentosEntity departamento;
 
     public Long getDocenteId() {

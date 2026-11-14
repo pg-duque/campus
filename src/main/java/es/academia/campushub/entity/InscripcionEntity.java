@@ -3,14 +3,21 @@ package es.academia.campushub.entity;
 import java.time.LocalDateTime;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
 @Document(collection = "inscripciones")
-@CompoundIndex(
+@CompoundIndexes({
+    @CompoundIndex(
     name = "uk_inscripcion_actividad_estudiante",
     def = "{'actividadId': 1, 'estudianteId': 1}",
-    unique = true)
+    unique = true),
+    @CompoundIndex(name = "ix_inscripciones_actividad_fecha",
+        def = "{'actividadId': 1, 'fechaInscripcion': 1}"),
+    @CompoundIndex(name = "ix_inscripciones_estudiante_fecha",
+        def = "{'estudianteId': 1, 'fechaInscripcion': 1}")
+})
 public class InscripcionEntity {
   @Id private Long id;
 

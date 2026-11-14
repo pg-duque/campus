@@ -5,7 +5,9 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "estudiantes", check = @CheckConstraint(
+@Table(name = "estudiantes",
+        indexes = @Index(name = "ix_estudiantes_grupo", columnList = "grupo_id"),
+        check = @CheckConstraint(
         name = "ck_estudiantes_fecha_nacimiento_pasada",
         constraint = "fecha_nacimiento < CURRENT_DATE"))
 public class EstudiantesEntity {

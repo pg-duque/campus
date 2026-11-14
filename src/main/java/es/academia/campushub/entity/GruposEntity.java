@@ -7,7 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name= "grupos")
+@Table(name = "grupos",
+        indexes = @Index(name = "ix_grupos_tutor", columnList = "tutor_docente_id"))
 public class GruposEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -42,6 +42,14 @@
         {
           campos: { actividadId: 1, estudianteId: 1 },
           opciones: { name: "uk_inscripcion_actividad_estudiante", unique: true }
+        },
+        {
+          campos: { actividadId: 1, fechaInscripcion: 1 },
+          opciones: { name: "ix_inscripciones_actividad_fecha" }
+        },
+        {
+          campos: { estudianteId: 1, fechaInscripcion: 1 },
+          opciones: { name: "ix_inscripciones_estudiante_fecha" }
         }
       ]
     },
@@ -81,6 +89,10 @@
         {
           campos: { actividadId: 1, etiquetaId: 1 },
           opciones: { name: "uk_actividad_etiqueta", unique: true }
+        },
+        {
+          campos: { etiquetaId: 1 },
+          opciones: { name: "ix_actividades_etiquetas_etiqueta" }
         }
       ]
     }

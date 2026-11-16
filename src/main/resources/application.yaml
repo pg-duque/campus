@@ -13,6 +13,7 @@ spring:
       ddl-auto: update # Solo para la practica: en produccion usar migraciones
   mongodb:
     uri: ${MONGODB_URI:mongodb://localhost:27017/campushub}
+    database: campushub
     auto-index-creation: true
   data:
     redis:

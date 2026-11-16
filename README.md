@@ -1,121 +1,201 @@
-# CampusHub — proyecto inicial para alumnos de 2.º DAM
+# CampusHub
 
-**IMPORTANTE:** Este repositorio es intencionadamente incompleto. La API tiene controllers REST y DTO,
-pero la persistencia no existe todavía. Cada operación del servicio devuelve **501 NOT_IMPLEMENTED**.
-Los tests funcionales deben pasar solo después de implementar las entidades, documentos,
-repositorios, servicios y restricciones. **No modificar controllers ni DTO para eludir requisitos.**
+Proyecto de Spring Boot para gestionar estudiantes, docentes, grupos y actividades.
+Usamos PostgreSQL para los datos con relaciones, MongoDB para las actividades y
+sus registros, y Redis para la ficha de contacto del estudiante.
+
+El README inicial del profesor se conserva sin cambios en
+[README_PROFESOR.md](README_PROFESOR.md).
 
 ## Requisitos
 
-- JDK 21 y Maven 3.9+ (o wrapper Maven configurado por el centro).
-- Docker Engine / Docker Desktop con Docker Compose v2.
+- Java 21.
+- Maven 3.9 o posterior, instalado o configurado en IntelliJ.
+- Docker Desktop abierto, con Docker Compose.
+- Si usamos WSL, activar su integración en Docker Desktop.
 
-## Estructura didáctica
+Todos los comandos se ejecutan desde la carpeta del proyecto. Los ejemplos de
+terminal son para PowerShell.
 
-El código parte de una arquitectura tradicional por capas:
+## Preparar la configuración
 
-```text
-controller/       endpoints REST y tratamiento de errores HTTP
-controller/dto/   contrato de entrada y salida de la API
-service/          casos de uso y reglas de negocio
-repository/       repositorios Spring Data que debe crear el alumno
-entity/           entidades JPA que debe crear el alumno
-document/         documentos MongoDB que debe crear el alumno
-mapper/           conversores entre persistencia y DTO que debe crear el alumno
+La primera vez, copiar la plantilla:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
-Los paquetes vacíos contienen `package-info.java` para explicar su responsabilidad sin entregar
-la solución de persistencia. Se puede implementar la conversión manualmente o con MapStruct.
-Lombok y MapStruct están disponibles de forma opcional; Maven ya incluye sus annotation processors
-para Java 21. No es obligatorio usar ninguna de las dos herramientas.
+Abrir `.env` y completar `POSTGRES_DB`, `POSTGRES_USER` y `POSTGRES_PASSWORD`.
+Los valores de la plantilla son ejemplos que hay que sustituir. Escribirlos como
+`NOMBRE=valor`, sin comillas ni `export`. Para evitar diferencias entre cómo lo
+leen Java y Docker, usar valores sin espacios, barras inversas ni los símbolos
+`$` y `#`.
 
-## Arranque
+**Si ya tenéis una base creada, usad sus datos actuales.** Cambiar este archivo
+no cambia el usuario ni la contraseña que ya tiene PostgreSQL.
 
-```bash
-mvn spring-boot:run
-```
+Docker Compose lee `.env` y Spring Boot también lo carga al arrancar desde la
+carpeta del proyecto. El archivo es local: está excluido de Git y del contexto
+de construcción de Docker. La plantilla `.env.example` sí se sube al repositorio.
 
-Spring Boot detecta `compose.yaml`, ejecuta automáticamente `docker compose up` antes de arrancar
-y detiene los contenedores cuando finaliza la aplicación. Por tanto, no hace falta arrancar
-PostgreSQL, MongoDB y Redis manualmente. Si se prefiere gestionarlos por separado:
+## Arrancar
 
-```bash
+Arrancar las bases y comprobar su estado:
+
+```powershell
 docker compose up -d
-mvn spring-boot:run -Dspring-boot.run.arguments=--spring.docker.compose.enabled=false
+docker compose ps
 ```
 
-Consultar PostgreSQL:
+Cuando aparezcan como `healthy`, arrancar Java:
 
-```bash
-docker compose exec postgres psql -U campushub -d campushub
+```powershell
+mvn spring-boot:run "-Dspring-boot.run.arguments=--spring.docker.compose.enabled=false"
 ```
 
-Consultar MongoDB:
+En IntelliJ también se puede ejecutar `CampusHubApplication` con el argumento
+`--spring.docker.compose.enabled=false` y la carpeta del proyecto como directorio
+de trabajo.
 
-```bash
+PostgreSQL se publica en `localhost:5433`, MongoDB en `localhost:27017` y Redis
+en `localhost:6379`.
+
+**En la primera preparación hay que aplicar los scripts SQL y de MongoDB después
+del primer arranque de Java**, cuando ya existan las tablas. Los comandos y sus
+resultados esperados están en [ARRANQUE.md](docs/ARRANQUE.md#3-ejecutar-los-scripts).
+
+La API se puede probar desde [Swagger](http://localhost:8080/swagger-ui.html).
+Hay ejemplos de peticiones en [ARRANQUE.md](docs/ARRANQUE.md).
+
+## Ejecutar las pruebas
+
+Pruebas unitarias:
+
+```powershell
+mvn test
+```
+
+Pruebas de integración y comprobación del formato:
+
+```powershell
+mvn verify
+```
+
+Para las de integración, Docker Desktop debe estar abierto. Testcontainers crea
+sus propios contenedores de prueba. `mvn verify` también revisa el formato del
+código; si falla, hay que mirar qué comprobación ha fallado.
+
+Aunque las pruebas no se evalúen en clase, dejamos los comandos para poder
+ejecutar las que contiene el proyecto.
+
+## Consultar directamente PostgreSQL
+
+Entrar con el usuario y la base que tiene configurados el contenedor:
+
+```powershell
+docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+```
+
+Dentro de `psql`:
+
+```sql
+-- Ver las tablas
+\dt
+
+-- Consultar estudiantes
+SELECT id, nombre, apellidos, email, grupo_id FROM estudiantes;
+
+-- Consultar estudiantes con su grupo
+SELECT e.id, e.nombre, e.apellidos, g.nombre AS grupo
+FROM estudiantes e
+JOIN grupos g ON e.grupo_id = g.id;
+
+-- Consultar docentes y departamentos
+SELECT * FROM docentes;
+SELECT * FROM departamentos;
+```
+
+Para buscar un registro concreto, se puede añadir `WHERE id = 1` a la consulta de
+estudiantes, cambiando el número por uno que exista. Para salir: `\q`.
+
+## Consultar directamente MongoDB
+
+```powershell
 docker compose exec mongo mongosh campushub
 ```
 
-Consultar Redis:
+Dentro de `mongosh`:
 
-```bash
+```javascript
+// Ver las colecciones
+show collections
+
+// Consultar actividades
+db.actividades.find()
+
+// Buscar una actividad concreta: sustituir 1 por su identificador
+db.actividades.findOne({ _id: NumberLong("1") })
+
+// Ver sus inscripciones por fecha
+db.inscripciones.find({
+  actividadId: NumberLong("1")
+}).sort({ fechaInscripcion: 1 })
+
+// Ver sus seguimientos
+db.seguimientos.find({
+  actividadId: NumberLong("1")
+}).sort({ creadoEn: 1 })
+
+// Ver los indices
+db.inscripciones.getIndexes()
+```
+
+Para salir: `exit`.
+
+## Consultar Redis
+
+```powershell
 docker compose exec redis redis-cli
 ```
 
-## Swagger y OpenAPI
+Para ver la ficha del estudiante 1, cambiando el número por uno que tenga ficha:
 
-Con la aplicación arrancada, la API se publica automáticamente en:
-
-- Swagger UI: <http://localhost:8080/swagger-ui.html>
-- OpenAPI JSON: <http://localhost:8080/v3/api-docs>
-- OpenAPI YAML: <http://localhost:8080/v3/api-docs.yaml>
-
-Springdoc obtiene el contrato inicial de los controllers y DTO. El alumno puede enriquecerlo con
-anotaciones OpenAPI, pero no debe cambiar los endpoints ni los cuerpos fijados por las pruebas.
-
-## Tests
-
-```bash
-mvn test                # tests unitarios con patrón *Test
-mvn verify              # tests de integración *IT y comprobación de formato
-mvn spotless:apply      # aplicar formato antes de verify
+```text
+HGETALL contactos:1
 ```
 
-Testcontainers necesita un motor Docker funcional. Las pruebas crean bases de datos **aisladas**;
-no utilizan las del `compose.yaml`, cuyo arranque automático está deshabilitado en el perfil de test.
-En el arranque inicial los tests de contrato funcional deben fallar.
+Para salir: `exit`.
 
-## Contrato público
+## Detener o reiniciar
 
-Campos de fecha: cadenas ISO-8601 (`YYYY-MM-DD`). Los nombres y estructuras están fijados
-por los `record` en `controller/dto`. Consultar `docs/api-contract.md`.
+Parar Java desde IntelliJ o con `Ctrl+C`. Después, parar las bases:
 
-## Responsabilidades del alumno
+```powershell
+docker compose stop
+```
 
-- Elegir reparto PostgreSQL/MongoDB y documentarlo.
-- Decidir justificadamente si Redis aporta valor; se entrega disponible, pero su uso no es obligatorio.
-- Implementar entidades y asociaciones JPA; documentos MongoDB y repositorios.
-- Reemplazar stubs de `service/CampusHubService` por lógica propia (puede refactorizarse).
-- Crear mappers/converters manuales o interfaces MapStruct en `mapper`.
-- Implementar restricciones reales de BD: FK, UNIQUE, NOT NULL, CHECK cuando corresponda.
-- Mantener el contrato REST y producir códigos 400/404/409 adecuados.
-- No confiar en validaciones previas de los DTO como sustituto de las restricciones de BD.
+Para volver a arrancar las bases:
 
-## Tratamiento de errores
+```powershell
+docker compose up -d
+```
 
-Se entregan excepciones `ResourceNotFoundException` (404), `BusinessConflictException` (409),
-`InvalidInputException` (400) y un handler de `DataIntegrityViolationException` (409).
-Los alumnos deben lanzar las excepciones correctas desde sus casos de uso y garantizar la integridad.
-Una excepción de integridad no debería exponer SQL interno. No todas las violaciones son conflictos:
-los alumnos podrán necesitar diferenciar errores según la operación.
+También se pueden reiniciar directamente con `docker compose restart`.
+Después hay que arrancar Java otra vez si estaba parado.
 
-## Persistencia en desarrollo
+Los datos se guardan en volúmenes de Docker. **No usar `docker compose down -v`
+si queremos conservarlos**, porque elimina esos volúmenes.
 
-`spring.jpa.hibernate.ddl-auto=update` facilita empezar con JPA. Para las restricciones que
-JPA no represente adecuadamente se pueden aplicar scripts SQL. **No se entregan scripts de solución.**
-En un entorno de producción convendría versionar el esquema con Flyway o Liquibase.
+## Documentación de la entrega
 
-## Limitación importante
+- [Modelo de datos](docs/MODELO_DATOS.md): diagrama, colecciones, campos, índices y reglas.
+- [Memoria](docs/MEMORIA.md): decisiones, alternativas y limitaciones.
+- [Guía de arranque](docs/ARRANQUE.md): preparación, scripts y ejemplos.
+- [Contrato de la API](docs/api-contract.md): rutas y respuestas.
 
-Estos ficheros proporcionan el contrato y la estructura, no una solución de referencia.
-Por defecto algunas pruebas del repositorio están destinadas a fallar.
+Para demostrar que los datos están guardados, crear registros con Swagger y
+localizarlos después con `psql`, `mongosh` y `redis-cli`. Tras reiniciar el
+entorno, consultar los mismos identificadores.
+
+La caché opcional del detalle de actividades no está implementada. El control de
+plazas con `synchronized` está pensado para una sola aplicación ejecutándose.

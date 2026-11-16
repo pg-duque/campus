@@ -3,8 +3,8 @@
 En este documento explicamos cómo hemos organizado los datos y por qué hemos
 tomado estas decisiones. El diagrama y las tablas están en
 [MODELO_DATOS.md](MODELO_DATOS.md). Los pasos para ejecutar el proyecto están en
-[ARRANQUE.md](ARRANQUE.md) y las comprobaciones en
-[COMPROBACIONES.md](COMPROBACIONES.md).
+[ARRANQUE.md](ARRANQUE.md). El [README](../README.md) incluye también cómo ejecutar
+las pruebas y consultar los datos directamente en las bases.
 
 ## Qué guardamos en cada base de datos
 

@@ -1,8 +1,9 @@
 # Cómo arrancar y usar CampusHub
 
 Estos pasos son para ejecutar nuestra versión del proyecto. Los comandos se
-ejecutan desde la carpeta del proyecto. Hemos dejado el README del profesor
-como estaba.
+ejecutan desde la carpeta del proyecto. El README del profesor se conserva en
+[README_PROFESOR.md](../README_PROFESOR.md). El [README de entrega](../README.md)
+resume los pasos e incluye cómo ejecutar las pruebas y consultar las bases.
 
 ## Qué necesitamos
 
@@ -10,6 +11,40 @@ como estaba.
 - IntelliJ con Maven configurado, o Maven 3.9 o posterior si usamos la terminal.
 - Docker Desktop abierto.
 - Si usamos WSL, activar su integración en Docker Desktop.
+
+## Antes de empezar: el archivo .env
+
+La primera vez, copiar la plantilla:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Abrir `.env` y sustituir el usuario y la contraseña de ejemplo. Si ya tenéis la
+base creada, poner los datos que ya utiliza. No volver a copiar la plantilla
+encima de un `.env` que esté configurado.
+
+Usar formato `NOMBRE=valor`, sin comillas ni `export`. Para que Docker y Java lo
+lean igual, evitar espacios, barras inversas y los símbolos `# Cómo arrancar y usar CampusHub
+
+Estos pasos son para ejecutar nuestra versión del proyecto. Los comandos se
+ejecutan desde la carpeta del proyecto. El README del profesor se conserva en
+[README_PROFESOR.md](../README_PROFESOR.md). El [README de entrega](../README.md)
+resume los pasos e incluye cómo ejecutar las pruebas y consultar las bases.
+
+## Qué necesitamos
+
+- Java 21.
+- IntelliJ con Maven configurado, o Maven 3.9 o posterior si usamos la terminal.
+- Docker Desktop abierto.
+- Si usamos WSL, activar su integración en Docker Desktop.
+
+ y `#` en los
+valores. El archivo `.env` no se sube a Git ni se incluye al construir la imagen.
+La plantilla `.env.example` sí se entrega.
+
+Java carga el archivo desde la carpeta del proyecto. En IntelliJ, esa carpeta
+debe ser el directorio de trabajo de la configuración de ejecución.
 
 ## 1. Arrancar las bases de datos
 
@@ -25,7 +60,7 @@ Este Compose arranca las bases de datos. La aplicación Java la arrancamos apart
 
 | Base de datos | Dirección | Datos para conectar |
 |---|---|---|
-| PostgreSQL | `localhost:5433` | Base, usuario y contraseña: `campushub`. |
+| PostgreSQL | `localhost:5433` | Base, usuario y contraseña: los que hayáis puesto en `.env`. |
 | MongoDB | `localhost:27017` | Base: `campushub`. Sin usuario ni contraseña en esta práctica. |
 | Redis | `localhost:6379` | Base 0. Sin contraseña en esta práctica. |
 
@@ -63,7 +98,7 @@ comandos en PowerShell.
 
 ```powershell
 Get-Content -Raw .\src\main\resources\db\fecha_nacimiento.sql |
-    docker compose exec -T postgres psql -U campushub -d campushub -v ON_ERROR_STOP=1
+    docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1'
 ```
 
 Al final debe aparecer `ck_estudiantes_fecha_nacimiento_pasada` con
@@ -73,7 +108,7 @@ Al final debe aparecer `ck_estudiantes_fecha_nacimiento_pasada` con
 
 ```powershell
 Get-Content -Raw .\src\main\resources\db\campos_obligatorios.sql |
-    docker compose exec -T postgres psql -U campushub -d campushub -v ON_ERROR_STOP=1
+    docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1'
 ```
 
 Deben aparecer `fecha_nacimiento`, `grupo_id` y `departamento_id` con
@@ -83,7 +118,7 @@ Deben aparecer `fecha_nacimiento`, `grupo_id` y `departamento_id` con
 
 ```powershell
 Get-Content -Raw .\src\main\resources\db\indices_postgres.sql |
-    docker compose exec -T postgres psql -U campushub -d campushub -v ON_ERROR_STOP=1
+    docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1'
 ```
 
 Deben aparecer los tres índices: `ix_estudiantes_grupo`,
@@ -171,7 +206,9 @@ volúmenes y los datos guardados.
 | No existe la tabla `public.estudiantes` | Arrancar Java primero para que cree las tablas. |
 | Un script rechaza datos | Revisar qué registros incumplen la regla y corregirlos antes de repetir el comando. |
 
-Las conexiones están en `application.yaml`. Se pueden cambiar con las variables
+El nombre de la base y sus credenciales se leen de `.env`. `application.yaml`
+utiliza `POSTGRES_DB`, `POSTGRES_USER` y `POSTGRES_PASSWORD`. Para otros entornos,
+las conexiones también se pueden cambiar con las variables
 `JDBC_URL`, `JDBC_USER`, `JDBC_PASSWORD`, `MONGODB_URI`, `REDIS_HOST`,
 `REDIS_PORT` y `PORT`. Si la base de PostgreSQL ya estaba creada, cambiar el
-usuario o contraseña en Compose no cambia los que estaban guardados.
+usuario o contraseña en `.env` no cambia los que estaban guardados.

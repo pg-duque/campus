@@ -176,3 +176,30 @@ otra ficha para el mismo estudiante, se actualiza la que ya tenía.
 Las fichas no caducan. En Compose, Redis tiene el volumen `redis_data` y la
 opción AOF activada para guardar los cambios en disco. La comprobación de que el
 estudiante existe se hace en el servicio.
+
+## Redis: caché del detalle de una actividad
+
+Además de las fichas, guardamos una copia temporal de la respuesta de
+`GET /api/actividades/{id}/detalle`.
+
+| Uso | Clave de ejemplo | Tipo en Redis | Caducidad |
+|---|---|---|---|
+| Contacto del estudiante 1 | `contactos:1` | Hash | Sin caducidad. |
+| Detalle de la actividad 1 | `cache:actividad:1:detalle` | String con JSON | 60 segundos desde que se guarda. |
+
+`CacheActividadService` utiliza `StringRedisTemplate` para leer y guardar el JSON.
+Si no encuentra la clave, el servicio consulta PostgreSQL y MongoDB, prepara el
+detalle y lo guarda en Redis. Leer una copia existente no renueva su caducidad.
+
+La copia se borra al inscribir a un estudiante, añadir un seguimiento o asociar
+una etiqueta a esa actividad. Si falla Redis, el detalle se calcula con las bases
+originales. Si falla el borrado, la copia puede seguir desactualizada hasta que
+caduque. Los cambios realizados directamente en las bases tampoco la borran.
+
+La ficha de contacto sigue siendo información guardada en Redis, sin otra copia
+en PostgreSQL o MongoDB. Por eso una caída de Redis sí impide consultar o guardar
+contactos, aunque el detalle de actividades pueda seguir funcionando.
+
+Las restricciones e índices descritos en este documento se preparan con los
+cuatro scripts de [ARRANQUE.md](ARRANQUE.md#3-aplicar-restricciones-e-índices).
+No se aplican automáticamente en otro servidor o en otra base de datos.

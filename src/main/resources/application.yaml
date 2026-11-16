@@ -12,7 +12,7 @@ spring:
     hibernate:
       ddl-auto: update # Solo para la practica: en produccion usar migraciones
   mongodb:
-    uri: ${MONGODB_URI:mongodb://localhost:27017/campushub}
+    uri: ${MONGODB_URI:mongodb://localhost:27018/campushub}
     database: campushub
     auto-index-creation: true
   data:

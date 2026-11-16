@@ -12,7 +12,7 @@ las pruebas y consultar los datos directamente en las bases.
 |---|---|---|
 | PostgreSQL | Estudiantes, docentes, departamentos, grupos y etiquetas. | Tienen campos definidos y relaciones que podemos controlar con claves foráneas. |
 | MongoDB | Actividades, inscripciones, seguimientos y etiquetas de cada actividad. | Nos permite trabajar con documentos. Es especialmente útil para los seguimientos, que pueden tener datos distintos. |
-| Redis | La ficha de contacto y autorización del estudiante. | Podemos buscar la ficha usando directamente el identificador del estudiante. |
+| Redis | La ficha de contacto y autorización del estudiante y una copia temporal del detalle de cada actividad. | Buscamos la ficha por el identificador del estudiante y evitamos repetir todas las consultas del detalle. |
 
 Podríamos haber guardado más información en PostgreSQL, pero el ejercicio nos
 pide trabajar con distintos tipos de bases de datos. Hemos separado las
@@ -26,8 +26,13 @@ según lo que necesitemos registrar.
 La ficha de Redis no es una copia de otra base: es donde guardamos esos datos.
 Por eso no le hemos puesto un tiempo de caducidad. Docker guarda sus archivos en
 un volumen y Redis tiene activada la opción AOF, que registra los cambios para
-poder recuperar los datos al arrancar. La caché de actividades del apartado
-opcional no está hecha.
+poder recuperar los datos al arrancar.
+
+La caché de actividades sí es una copia: el detalle original se calcula con datos
+de PostgreSQL y MongoDB. Lo guardamos como JSON durante 60 segundos. Al inscribir
+a un estudiante, registrar un seguimiento o asociar una etiqueta, borramos la
+copia para que el siguiente detalle incluya el cambio. Si Redis falla, el servicio
+intenta calcular el detalle usando las otras bases.
 
 ## Identificadores y relaciones
 
@@ -77,6 +82,12 @@ varias copias de la aplicación, no se coordinarían entre ellas. Tampoco proteg
 frente a alguien que añada inscripciones directamente en MongoDB. Para esos
 casos habría que cambiar la forma de controlar las plazas.
 
+También coordinamos el detalle y las operaciones que borran su caché con
+`synchronized`. Es sencillo, aunque hace que estas peticiones se esperen unas a
+otras. Si cambia un dato directamente en la base o falla el borrado de la caché,
+la copia puede quedar desactualizada hasta que caduque. No hemos resuelto la
+coordinación entre varias instancias de Java.
+
 Las tres bases tampoco guardan todos los cambios como una única operación. Si
 alguien cambia o borra datos directamente, pueden quedar relaciones incorrectas.
 El servicio comprueba que los datos existan, pero no arregla automáticamente esos
@@ -87,6 +98,11 @@ problemas. Si Redis no funciona, no se podrá guardar ni consultar el contacto.
 Hemos unificado los identificadores, quitado métodos repetidos y colocado la
 generación de secuencias en el servicio. No usamos callbacks. También hemos
 completado los métodos del servicio y añadido las reglas e índices de las bases.
+
+Después añadimos la caché opcional de actividades. Durante las pruebas en clase
+encontramos conexiones a bases y contenedores distintos entre Windows y WSL.
+Dejamos MongoDB en el puerto local `27018`, con la base `campushub`, y documentamos
+cómo comprobar el entorno antes de consultar datos o aplicar los scripts.
 
 Se valoró una solución con PostgreSQL para controlar las plazas desde varias
 aplicaciones, pero hemos mantenido `synchronized` para que el proyecto sea más

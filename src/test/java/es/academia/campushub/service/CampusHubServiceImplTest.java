@@ -51,6 +51,8 @@ class CampusHubServiceImplTest {
   @Mock private ActividadEtiquetaRepository actividadEtiquetaRepository;
   @Mock private EtiquetaRepository etiquetaRepository;
   @Mock private ContactoRepository contactoRepository;
+  @Mock private SecuenciaMongoService secuencias;
+  @Mock private CacheActividadService cacheActividad;
 
   @InjectMocks private CampusHubServiceImpl service;
 

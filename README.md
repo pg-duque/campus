@@ -1,201 +1,160 @@
 # CampusHub
 
 Proyecto de Spring Boot para gestionar estudiantes, docentes, grupos y actividades.
-Usamos PostgreSQL para los datos con relaciones, MongoDB para las actividades y
-sus registros, y Redis para la ficha de contacto del estudiante.
+Guardamos los datos con relaciones en PostgreSQL, las actividades y sus registros
+en MongoDB, y las fichas de contacto en Redis. También usamos Redis como caché
+del detalle de una actividad durante 60 segundos.
 
-El README inicial del profesor se conserva sin cambios en
-[README_PROFESOR.md](README_PROFESOR.md).
+El documento inicial del profesor se conserva en
+[README_PROFESOR.md](README_PROFESOR.md). Las instrucciones de nuestra versión son
+las de este README y la [guía de arranque](docs/ARRANQUE.md).
 
 ## Requisitos
 
 - Java 21.
-- Maven 3.9 o posterior, instalado o configurado en IntelliJ.
-- Docker Desktop abierto, con Docker Compose.
-- Si usamos WSL, activar su integración en Docker Desktop.
+- Maven 3.9 o posterior, instalado o disponible desde IntelliJ.
+- Docker con Docker Compose. En Windows usamos Docker Desktop.
+- Si ejecutamos Docker desde WSL, integración con la distribución correspondiente.
 
-Todos los comandos se ejecutan desde la carpeta del proyecto. Los ejemplos de
-terminal son para PowerShell.
+Ejecutamos los comandos desde la carpeta del proyecto. Podemos usar PowerShell o
+WSL, manteniendo el mismo entorno Docker para el arranque, las consultas y los
+scripts. En clase encontramos que ambos clientes apuntaban a bases distintas.
+La guía explica cómo comprobarlo.
 
-## Preparar la configuración
+## Configuración y arranque
 
-La primera vez, copiar la plantilla:
+La primera vez copiamos la plantilla. En PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Abrir `.env` y completar `POSTGRES_DB`, `POSTGRES_USER` y `POSTGRES_PASSWORD`.
-Los valores de la plantilla son ejemplos que hay que sustituir. Escribirlos como
-`NOMBRE=valor`, sin comillas ni `export`. Para evitar diferencias entre cómo lo
-leen Java y Docker, usar valores sin espacios, barras inversas ni los símbolos
-`$` y `#`.
+En WSL usamos `cp .env.example .env`. Si ya existe `.env`, conservamos sus datos.
+Completamos sus valores locales. Compose y Spring Boot lo leen al arrancar desde
+la carpeta del proyecto. Usamos `NOMBRE=valor`, sin comillas ni `export`, y valores
+sin espacios, barras inversas ni los símbolos `$` y `#` para que ambos lo lean igual.
+El archivo queda excluido de Git. Cambiar las credenciales en `.env` no modifica
+las de una base ya creada.
 
-**Si ya tenéis una base creada, usad sus datos actuales.** Cambiar este archivo
-no cambia el usuario ni la contraseña que ya tiene PostgreSQL.
+En el entorno Docker elegido:
 
-Docker Compose lee `.env` y Spring Boot también lo carga al arrancar desde la
-carpeta del proyecto. El archivo es local: está excluido de Git y del contexto
-de construcción de Docker. La plantilla `.env.example` sí se sube al repositorio.
-
-## Arrancar
-
-Arrancar las bases y comprobar su estado:
-
-```powershell
+```bash
 docker compose up -d
 docker compose ps
 ```
 
-Cuando aparezcan como `healthy`, arrancar Java:
+Cuando estén `healthy`, ejecutamos `CampusHubApplication` en IntelliJ, con la
+carpeta del proyecto como directorio de trabajo y este **argumento del programa**:
 
-```powershell
+```text
+--spring.docker.compose.enabled=false
+```
+
+También podemos arrancar con Maven:
+
+```bash
 mvn spring-boot:run "-Dspring-boot.run.arguments=--spring.docker.compose.enabled=false"
 ```
 
-En IntelliJ también se puede ejecutar `CampusHubApplication` con el argumento
-`--spring.docker.compose.enabled=false` y la carpeta del proyecto como directorio
-de trabajo.
+| Servicio | Dirección desde el ordenador | Puerto dentro del contenedor |
+|---|---|---|
+| PostgreSQL | `localhost:5433` | `5432` |
+| MongoDB | `localhost:27018`, base `campushub` | `27017` |
+| Redis | `localhost:6379` | `6379` |
 
-PostgreSQL se publica en `localhost:5433`, MongoDB en `localhost:27017` y Redis
-en `localhost:6379`.
+Después del primer arranque de Java aplicamos los cuatro scripts de
+[preparación de las bases](docs/ARRANQUE.md#3-aplicar-restricciones-e-índices).
+Hibernate necesita crear las tablas antes de ejecutar los scripts SQL.
 
-**En la primera preparación hay que aplicar los scripts SQL y de MongoDB después
-del primer arranque de Java**, cuando ya existan las tablas. Los comandos y sus
-resultados esperados están en [ARRANQUE.md](docs/ARRANQUE.md#3-ejecutar-los-scripts).
+Probamos la API desde [Swagger](http://localhost:8080/swagger-ui.html).
+La guía contiene ejemplos y consultas para comprobar dónde queda cada dato.
 
-La API se puede probar desde [Swagger](http://localhost:8080/swagger-ui.html).
-Hay ejemplos de peticiones en [ARRANQUE.md](docs/ARRANQUE.md).
+## Pruebas
 
-## Ejecutar las pruebas
-
-Pruebas unitarias:
-
-```powershell
+```bash
 mvn test
-```
-
-Pruebas de integración y comprobación del formato:
-
-```powershell
 mvn verify
 ```
 
-Para las de integración, Docker Desktop debe estar abierto. Testcontainers crea
-sus propios contenedores de prueba. `mvn verify` también revisa el formato del
-código; si falla, hay que mirar qué comprobación ha fallado.
+`mvn test` ejecuta las pruebas unitarias. `mvn verify` incluye las de integración
+y la revisión del formato. Testcontainers necesita acceso a Docker y crea
+contenedores separados de los datos del proyecto.
 
-Aunque las pruebas no se evalúen en clase, dejamos los comandos para poder
-ejecutar las que contiene el proyecto.
+## Consultas directas
 
-## Consultar directamente PostgreSQL
+Estos comandos usan el Docker de la terminal actual. Si utilizamos el de WSL
+desde PowerShell, ponemos `wsl --exec` delante de `docker`.
 
-Entrar con el usuario y la base que tiene configurados el contenedor:
+### PostgreSQL
 
-```powershell
+```bash
 docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 ```
 
 Dentro de `psql`:
 
 ```sql
--- Ver las tablas
-\dt
-
--- Consultar estudiantes
-SELECT id, nombre, apellidos, email, grupo_id FROM estudiantes;
-
--- Consultar estudiantes con su grupo
-SELECT e.id, e.nombre, e.apellidos, g.nombre AS grupo
-FROM estudiantes e
-JOIN grupos g ON e.grupo_id = g.id;
-
--- Consultar docentes y departamentos
-SELECT * FROM docentes;
-SELECT * FROM departamentos;
+\conninfo
+\dt public.*
+SELECT id, nombre, apellidos, email, grupo_id FROM public.estudiantes;
+SELECT * FROM public.docentes;
 ```
 
-Para buscar un registro concreto, se puede añadir `WHERE id = 1` a la consulta de
-estudiantes, cambiando el número por uno que exista. Para salir: `\q`.
+Salimos con `\q`.
 
-## Consultar directamente MongoDB
+### MongoDB
 
-```powershell
+```bash
 docker compose exec mongo mongosh campushub
 ```
 
 Dentro de `mongosh`:
 
 ```javascript
-// Ver las colecciones
+db.getName()
 show collections
-
-// Consultar actividades
-db.actividades.find()
-
-// Buscar una actividad concreta: sustituir 1 por su identificador
+db.actividades.find().toArray()
 db.actividades.findOne({ _id: NumberLong("1") })
-
-// Ver sus inscripciones por fecha
-db.inscripciones.find({
-  actividadId: NumberLong("1")
-}).sort({ fechaInscripcion: 1 })
-
-// Ver sus seguimientos
-db.seguimientos.find({
-  actividadId: NumberLong("1")
-}).sort({ creadoEn: 1 })
-
-// Ver los indices
-db.inscripciones.getIndexes()
+db.inscripciones.find({ actividadId: NumberLong("1") }).toArray()
+db.seguimientos.find({ actividadId: NumberLong("1") }).sort({ creadoEn: 1 }).toArray()
 ```
 
-Para salir: `exit`.
+Sustituimos los identificadores por los de los registros creados. Salimos con `exit`.
 
-## Consultar Redis
+### Redis
 
-```powershell
+```bash
 docker compose exec redis redis-cli
 ```
 
-Para ver la ficha del estudiante 1, cambiando el número por uno que tenga ficha:
+Dentro de `redis-cli`, para el estudiante y la actividad de ejemplo:
 
 ```text
 HGETALL contactos:1
+GET cache:actividad:1:detalle
+TTL cache:actividad:1:detalle
 ```
 
-Para salir: `exit`.
+La ficha es un hash sin caducidad. El detalle es un texto JSON que aparece al
+consultar `GET /api/actividades/1/detalle` y caduca a los 60 segundos.
+Salimos con `exit`.
 
-## Detener o reiniciar
+## Detener y reiniciar
 
-Parar Java desde IntelliJ o con `Ctrl+C`. Después, parar las bases:
+Paramos Java y detenemos las bases con `docker compose stop`. Para volver a
+arrancarlas usamos `docker compose up -d` y ejecutamos Java otra vez.
+También podemos reiniciar las bases directamente con `docker compose restart`.
 
-```powershell
-docker compose stop
-```
+Los datos se guardan en volúmenes. `docker compose down -v` elimina esos volúmenes,
+por lo que no lo usamos para comprobar la persistencia. La caché puede caducar;
+los datos originales de la actividad siguen en PostgreSQL y MongoDB.
 
-Para volver a arrancar las bases:
+## Documentación
 
-```powershell
-docker compose up -d
-```
-
-También se pueden reiniciar directamente con `docker compose restart`.
-Después hay que arrancar Java otra vez si estaba parado.
-
-Los datos se guardan en volúmenes de Docker. **No usar `docker compose down -v`
-si queremos conservarlos**, porque elimina esos volúmenes.
-
-## Documentación de la entrega
-
-- [Modelo de datos](docs/MODELO_DATOS.md): diagrama, colecciones, campos, índices y reglas.
+- [Modelo de datos](docs/MODELO_DATOS.md): diagrama, colecciones, índices y restricciones.
 - [Memoria](docs/MEMORIA.md): decisiones, alternativas y limitaciones.
-- [Guía de arranque](docs/ARRANQUE.md): preparación, scripts y ejemplos.
+- [Arranque y comprobaciones](docs/ARRANQUE.md): preparación, scripts, Swagger y consultas.
 - [Contrato de la API](docs/api-contract.md): rutas y respuestas.
 
-Para demostrar que los datos están guardados, crear registros con Swagger y
-localizarlos después con `psql`, `mongosh` y `redis-cli`. Tras reiniciar el
-entorno, consultar los mismos identificadores.
-
-La caché opcional del detalle de actividades no está implementada. El control de
-plazas con `synchronized` está pensado para una sola aplicación ejecutándose.
+El control de plazas y la coordinación de la caché con `synchronized` están
+pensados para una sola instancia de la aplicación.

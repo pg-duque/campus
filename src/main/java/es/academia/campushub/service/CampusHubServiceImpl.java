@@ -48,19 +48,21 @@ public class CampusHubServiceImpl implements CampusHubService {
   private final DepartamentosRepository departamentosRepository;
   private final GruposRepository gruposRepository;
   private final SecuenciaMongoService secuencias;
+  private final CacheActividadService cacheActividad;
 
   public CampusHubServiceImpl(
-      ActividadRepository actividadRepository,
-      DocenteRepository docenteRepository,
-      InscripcionRepository inscripcionRepository,
-      EstudiantesRepository estudiantesRepository,
-      SeguimientoRepository seguimientoRepository,
-      ActividadEtiquetaRepository actividadEtiquetaRepository,
-      EtiquetaRepository etiquetaRepository,
-      ContactoRepository contactoRepository,
-      DepartamentosRepository departamentosRepository,
-      GruposRepository gruposRepository,
-      SecuenciaMongoService secuencias) {
+          ActividadRepository actividadRepository,
+          DocenteRepository docenteRepository,
+          InscripcionRepository inscripcionRepository,
+          EstudiantesRepository estudiantesRepository,
+          SeguimientoRepository seguimientoRepository,
+          ActividadEtiquetaRepository actividadEtiquetaRepository,
+          EtiquetaRepository etiquetaRepository,
+          ContactoRepository contactoRepository,
+          DepartamentosRepository departamentosRepository,
+          GruposRepository gruposRepository,
+          SecuenciaMongoService secuencias,
+          CacheActividadService cacheActividad) {
     this.actividadRepository = actividadRepository;
     this.docenteRepository = docenteRepository;
     this.inscripcionRepository = inscripcionRepository;
@@ -72,6 +74,7 @@ public class CampusHubServiceImpl implements CampusHubService {
     this.departamentosRepository = departamentosRepository;
     this.gruposRepository = gruposRepository;
     this.secuencias = secuencias;
+    this.cacheActividad = cacheActividad;
   }
 
   @Override
@@ -189,6 +192,7 @@ public class CampusHubServiceImpl implements CampusHubService {
     InscripcionEntity inscripcion = new InscripcionEntity(actividadId, request.estudianteId());
     inscripcion.setId(secuencias.siguiente("inscripciones"));
     InscripcionEntity guardada = inscripcionRepository.save(inscripcion);
+    cacheActividad.borrar(actividadId);
     return new InscripcionResponse(guardada.getId(), guardada.getActividadId(),
         guardada.getEstudianteId(), guardada.getFechaInscripcion().toString());
   }
@@ -200,7 +204,7 @@ public class CampusHubServiceImpl implements CampusHubService {
   }
 
   @Override
-  public SeguimientoResponse registrarSeguimiento(
+  public synchronized  SeguimientoResponse registrarSeguimiento(
       Long actividadId, CreateSeguimientoRequest request) {
     validarId(actividadId);
     if (request.tipo() == null || request.tipo().isBlank()) {
@@ -216,6 +220,7 @@ public class CampusHubServiceImpl implements CampusHubService {
     SeguimientoEntity guardado =
         seguimientoRepository.save(
             new SeguimientoEntity(actividadId, request.tipo(), request.datos(), Instant.now()));
+            cacheActividad.borrar(actividadId);
     return seguimientoResponse(guardado);
   }
 
@@ -235,30 +240,47 @@ public class CampusHubServiceImpl implements CampusHubService {
   }
 
   @Override
-  public ActividadDetalleResponse detalle(Long id) {
-    Long actividadId = id;
-    ActividadEntity actividad = buscarActividad(actividadId);
-    DocenteEntity docente =
-        docenteRepository
+  public synchronized ActividadDetalleResponse detalle(Long id) {
+    validarId(id);
+
+    ActividadDetalleResponse copia = cacheActividad.buscar(id);
+
+    if (copia != null) {
+      return copia;
+    }
+
+    ActividadEntity actividad = buscarActividad(id);
+
+    DocenteEntity docente = docenteRepository
             .findById(actividad.docenteId())
             .orElseThrow(
-                () -> new ResourceNotFoundException("No existe el docente responsable"));
+                    () -> new ResourceNotFoundException(
+                            "No existe el docente responsable"));
 
     List<InscripcionEntity> inscripciones =
-        inscripcionRepository.findByActividadIdOrderByFechaInscripcionAsc(actividadId);
-    List<EstudianteResponse> participantes = obtenerEstudiantes(inscripciones);
+            inscripcionRepository
+                    .findByActividadIdOrderByFechaInscripcionAsc(id);
+
+    List<EstudianteResponse> participantes =
+            obtenerEstudiantes(inscripciones);
+
     int ocupadas = inscripciones.size();
 
-    List<EtiquetaResponse> etiquetas = obtenerEtiquetas(actividadId);
+    List<EtiquetaResponse> etiquetas = obtenerEtiquetas(id);
     List<SeguimientoResponse> seguimientos = obtenerSeguimientos(id);
-    return new ActividadDetalleResponse(
-        actividadResponse(actividad),
-        docenteResponse(docente),
-        ocupadas,
-        Math.max(0, actividad.maxParticipantes() - ocupadas),
-        participantes,
-        etiquetas,
-        seguimientos);
+
+    ActividadDetalleResponse detalle = new ActividadDetalleResponse(
+            actividadResponse(actividad),
+            docenteResponse(docente),
+            ocupadas,
+            Math.max(0, actividad.maxParticipantes() - ocupadas),
+            participantes,
+            etiquetas,
+            seguimientos);
+
+    cacheActividad.guardar(id, detalle);
+
+    return detalle;
   }
 
   @Override
@@ -323,7 +345,7 @@ public class CampusHubServiceImpl implements CampusHubService {
   }
 
   @Override
-  public void asociarEtiqueta(Long actividadId, Long etiquetaId) {
+  public synchronized  void  asociarEtiqueta(Long actividadId, Long etiquetaId) {
     validarId(actividadId);
     validarId(etiquetaId);
     if (!actividadRepository.existsById(actividadId)) {
@@ -332,11 +354,11 @@ public class CampusHubServiceImpl implements CampusHubService {
     if (!etiquetaRepository.existsById(etiquetaId)) {
       throw new ResourceNotFoundException("No existe la etiqueta indicada");
     }
-    // El ID compuesto hace que repetir la misma asociación guarde la misma relación.
     if (!actividadEtiquetaRepository.existsByActividadIdAndEtiquetaId(actividadId, etiquetaId)) {
       actividadEtiquetaRepository.save(new ActividadEtiquetaEntity(
           actividadId + ":" + etiquetaId, actividadId, etiquetaId));
     }
+    cacheActividad.borrar(actividadId);
   }
 
   @Override
